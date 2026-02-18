@@ -76,7 +76,7 @@ export function isBusted(hand: Hand): boolean {
 
 export function canSplit(hand: Hand): boolean {
   if (hand.cards.length !== 2) return false;
-  return getCardValue(hand.cards[0]) === getCardValue(hand.cards[1]);
+  return hand.cards[0].rank === hand.cards[1].rank;
 }
 
 export function canDouble(hand: Hand): boolean {

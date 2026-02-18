@@ -99,7 +99,9 @@ function HandDisplay({
     >
       <div className="flex items-center gap-2 mb-2">
         <span className="font-semibold text-zinc-700">{label}</span>
-        {hasBlackjack && !hiddenFirst ? (
+        {hiddenFirst ? (
+          <span className="text-sm text-zinc-500">(?)</span>
+        ) : hasBlackjack ? (
           <span className="text-sm font-bold text-amber-600">BLACKJACK!</span>
         ) : (
           <span className="text-sm text-zinc-500">
