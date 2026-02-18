@@ -91,13 +91,13 @@ export interface IncorrectPlay {
 }
 
 export const DEFAULT_HOUSE_RULES: HouseRules = {
-  hitSoft17: false,
-  surrenderAllowed: "late",
+  hitSoft17: true,
+  surrenderAllowed: "none",
   doubleAfterSplit: true,
   doubleRestriction: "any",
-  resplitAces: false,
+  resplitAces: true,
   blackjackPays: "3:2",
-  decks: 6,
+  decks: 2,
   noHoleCard: false,
   maxSplitHands: 4,
 };
