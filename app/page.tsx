@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   HouseRules,
   GameState,
@@ -24,6 +24,7 @@ import { calculateHandValue, isBusted, isBlackjack } from "./lib/deck";
 interface SessionStats {
   correct: number;
   wrong: number;
+  winnings: number;
 }
 
 const suitSymbols: Record<string, string> = {
@@ -291,7 +292,7 @@ function SettingsPanel({
 }
 
 function loadSessionStats(): SessionStats {
-  if (typeof window === "undefined") return { correct: 0, wrong: 0 };
+  if (typeof window === "undefined") return { correct: 0, wrong: 0, winnings: 0 };
   try {
     const saved = localStorage.getItem("blackjack-stats");
     if (saved) {
@@ -301,13 +302,13 @@ function loadSessionStats(): SessionStats {
         typeof parsed.correct === "number" &&
         typeof parsed.wrong === "number"
       ) {
-        return parsed;
+        return { correct: parsed.correct, wrong: parsed.wrong, winnings: parsed.winnings || 0 };
       }
     }
   } catch {
     // ignore
   }
-  return { correct: 0, wrong: 0 };
+  return { correct: 0, wrong: 0, winnings: 0 };
 }
 
 export default function Home() {
@@ -318,11 +319,12 @@ export default function Home() {
   const [sessionStats, setSessionStats] =
     useState<SessionStats>(loadSessionStats);
 
-  const updateSessionStats = useCallback((isCorrect: boolean) => {
+  const updateSessionStats = useCallback((isCorrect: boolean, winAmount: number) => {
     setSessionStats((prev) => {
       const newStats = {
         correct: prev.correct + (isCorrect ? 1 : 0),
         wrong: prev.wrong + (isCorrect ? 0 : 1),
+        winnings: prev.winnings + winAmount,
       };
       localStorage.setItem("blackjack-stats", JSON.stringify(newStats));
       return newStats;
@@ -330,9 +332,46 @@ export default function Home() {
   }, []);
 
   const resetSessionStats = useCallback(() => {
-    setSessionStats({ correct: 0, wrong: 0 });
+    setSessionStats({ correct: 0, wrong: 0, winnings: 0 });
     localStorage.removeItem("blackjack-stats");
   }, []);
+
+  const winningsProcessedRef = useRef(false);
+
+  useEffect(() => {
+    if (gameState?.phase === "resolved" && !winningsProcessedRef.current) {
+      winningsProcessedRef.current = true;
+      
+      let totalWinnings = 0;
+      gameState.playerHands.forEach((hand) => {
+        const result = getHandResult(hand, gameState.dealerHand);
+        const bet = hand.isDoubledDown ? 20 : 10;
+        
+        if (result === "win") {
+          totalWinnings += bet;
+        } else if (result === "blackjack") {
+          const blackjackPayout = rules.blackjackPays === "3:2" ? 1.5 : rules.blackjackPays === "6:5" ? 1.2 : 1;
+          totalWinnings += Math.round(bet * blackjackPayout);
+        } else if (result === "lose") {
+          totalWinnings -= bet;
+        } else if (result === "surrender") {
+          totalWinnings -= 5;
+        }
+      });
+      
+      if (totalWinnings !== 0) {
+        setSessionStats((prev) => {
+          const newStats = { ...prev, winnings: prev.winnings + totalWinnings };
+          localStorage.setItem("blackjack-stats", JSON.stringify(newStats));
+          return newStats;
+        });
+      }
+    }
+    
+    if (gameState?.phase !== "resolved") {
+      winningsProcessedRef.current = false;
+    }
+  }, [gameState, rules.blackjackPays]);
 
   const startNewGame = useCallback(() => {
     const newGame = initGame(rules);
@@ -409,7 +448,7 @@ export default function Home() {
         };
       }
 
-      updateSessionStats(isCorrect);
+      updateSessionStats(isCorrect, 0);
       setGameState(newState);
       setShowCorrectAnswer(!isCorrect);
     },
@@ -478,6 +517,26 @@ export default function Home() {
                     %
                   </div>
                   <div className="text-sm text-zinc-500">Accuracy</div>
+                </div>
+                <div className="text-center">
+                  <div
+                    className={`text-2xl font-bold ${
+                      sessionStats.winnings > 0
+                        ? "text-green-600"
+                        : sessionStats.winnings < 0
+                          ? "text-red-600"
+                          : "text-zinc-900"
+                    }`}
+                  >
+                    {sessionStats.winnings >= 0 ? "+" : ""}
+                    {sessionStats.winnings.toLocaleString("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </div>
+                  <div className="text-sm text-zinc-500">Winnings</div>
                 </div>
                 <button
                   onClick={resetSessionStats}
@@ -692,7 +751,7 @@ export default function Home() {
 }
 
 function getHandResult(
-  playerHand: { cards: Card[]; isSurrendered: boolean },
+  playerHand: { cards: Card[]; isSurrendered: boolean; isDoubledDown: boolean },
   dealerHand: { cards: Card[] },
 ): "win" | "lose" | "push" | "blackjack" | "surrender" {
   if (playerHand.isSurrendered) return "surrender";
