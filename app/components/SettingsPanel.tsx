@@ -1,4 +1,16 @@
+"use client";
+
 import { HouseRules } from "../lib/types";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface SettingsPanelProps {
   rules: HouseRules;
@@ -10,16 +22,17 @@ interface SettingsPanelProps {
 export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: SettingsPanelProps) {
   return (
     <div className="w-full">
-      <button
+      <Button
         onClick={onToggle}
-        className="w-full px-4 py-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg flex items-center justify-between"
+        variant="outline"
+        className="w-full justify-between"
       >
         <span className="font-medium">House Rules</span>
-        <span>{isOpen ? "▲" : "▼"}</span>
-      </button>
+        {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+      </Button>
 
       {isOpen && (
-        <div className="mt-4 p-4 bg-zinc-50 rounded-lg space-y-4">
+        <div className="mt-4 p-4 bg-muted/50 rounded-lg space-y-4">
           <ToggleOption
             label="Dealer hits on soft 17"
             checked={rules.hitSoft17}
@@ -112,13 +125,8 @@ interface ToggleOptionProps {
 function ToggleOption({ label, checked, onChange }: ToggleOptionProps) {
   return (
     <div className="flex items-center justify-between">
-      <label className="text-sm font-medium text-zinc-700">{label}</label>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="w-5 h-5 rounded"
-      />
+      <label className="text-sm font-medium">{label}</label>
+      <Switch checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }
@@ -133,18 +141,19 @@ interface SelectOptionProps {
 function SelectOption({ label, value, options, onChange }: SelectOptionProps) {
   return (
     <div className="flex items-center justify-between">
-      <label className="text-sm font-medium text-zinc-700">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="px-3 py-1 rounded border border-zinc-300"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <label className="text-sm font-medium">{label}</label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger size="sm" className="w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -157,35 +166,35 @@ interface DeckSelectorProps {
 function DeckSelector({ decks, onChange }: DeckSelectorProps) {
   return (
     <div className="flex items-center justify-between">
-      <label className="text-sm font-medium text-zinc-700">Number of decks</label>
+      <label className="text-sm font-medium">Number of decks</label>
       <div className="flex gap-2">
         {[2, 6].map((num) => (
-          <button
+          <Button
             key={num}
+            variant={decks === num ? "default" : "outline"}
+            size="sm"
             onClick={() => onChange(num)}
-            className={`px-3 py-1 rounded text-sm font-medium ${
-              decks === num
-                ? "bg-green-600 text-white"
-                : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"
-            }`}
+            className={decks === num ? "bg-green-600 hover:bg-green-700" : ""}
           >
             {num}
-          </button>
+          </Button>
         ))}
-        <select
-          value={decks === 2 || decks === 6 ? "" : decks}
-          onChange={(e) => e.target.value && onChange(parseInt(e.target.value))}
-          className={`px-2 py-1 rounded border text-sm ${
-            decks !== 2 && decks !== 6
-              ? "bg-green-600 text-white border-green-600"
-              : "bg-white border-zinc-300"
-          }`}
+        <Select
+          value={decks === 2 || decks === 6 ? "" : decks.toString()}
+          onValueChange={(v) => v && onChange(parseInt(v))}
         >
-          <option value="">Other</option>
-          <option value="1">1</option>
-          <option value="4">4</option>
-          <option value="8">8</option>
-        </select>
+          <SelectTrigger
+            size="sm"
+            className={decks !== 2 && decks !== 6 ? "bg-green-600 text-white border-green-600 w-20" : "w-20"}
+          >
+            <SelectValue placeholder="Other" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">1</SelectItem>
+            <SelectItem value="4">4</SelectItem>
+            <SelectItem value="8">8</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

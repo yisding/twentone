@@ -1,5 +1,6 @@
 import { HouseRules, SessionStats } from "../lib/types";
 import { calculateHouseEdge, formatHouseEdge } from "../lib/houseEdge";
+import { Button } from "@/components/ui/button";
 
 interface StatsBarProps {
   stats: SessionStats;
@@ -20,23 +21,20 @@ export function StatsBar({ stats, rules, onReset }: StatsBarProps) {
   });
 
   return (
-    <div className="p-4 bg-zinc-100 border-b border-zinc-200">
+    <div className="p-4 bg-muted border-b">
       <div className="flex items-center justify-center gap-8">
-        <Stat value={stats.correct} label="Correct" color="text-green-600" />
-        <Stat value={stats.wrong} label="Wrong" color="text-red-600" />
+        <Stat value={stats.correct} label="Correct" className="text-green-600" />
+        <Stat value={stats.wrong} label="Wrong" className="text-destructive" />
         <Stat value={`${accuracy}%`} label="Accuracy" />
         <Stat
           value={`${stats.winnings >= 0 ? "+" : ""}${formattedWinnings}`}
           label="Winnings"
-          color={stats.winnings > 0 ? "text-green-600" : stats.winnings < 0 ? "text-red-600" : undefined}
+          className={stats.winnings > 0 ? "text-green-600" : stats.winnings < 0 ? "text-destructive" : undefined}
         />
         <Stat value={formatHouseEdge(calculateHouseEdge(rules))} label="House Edge" />
-        <button
-          onClick={onReset}
-          className="text-sm text-zinc-500 hover:text-zinc-700 underline"
-        >
+        <Button variant="link" size="sm" onClick={onReset} className="text-muted-foreground">
           Reset
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -45,14 +43,14 @@ export function StatsBar({ stats, rules, onReset }: StatsBarProps) {
 interface StatProps {
   value: number | string;
   label: string;
-  color?: string;
+  className?: string;
 }
 
-function Stat({ value, label, color }: StatProps) {
+function Stat({ value, label, className }: StatProps) {
   return (
     <div className="text-center">
-      <div className={`text-2xl font-bold ${color || "text-zinc-900"}`}>{value}</div>
-      <div className="text-sm text-zinc-500">{label}</div>
+      <div className={`text-2xl font-bold ${className || "text-foreground"}`}>{value}</div>
+      <div className="text-sm text-muted-foreground">{label}</div>
     </div>
   );
 }
