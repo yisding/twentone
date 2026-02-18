@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { GameState, HouseRules, PlayerAction } from "../lib/types";
+import { GameState, HouseRules, PlayerAction, Card } from "../lib/types";
 import {
   initGame,
   getAvailableActions,
@@ -12,13 +12,14 @@ import {
   getHandResult,
 } from "../lib/game";
 import { getBasicStrategyAction } from "../lib/strategy";
-import { isBusted, isBlackjack } from "../lib/deck";
+import { isBusted, isBlackjack, getDealerUpCard } from "../lib/deck";
 
 export function useGameState(
   rules: HouseRules,
   onCorrectAnswer: () => void,
   onWrongAnswer: () => void,
   onWinnings: (amount: number) => void,
+  onIncorrectPlay?: (playerCards: Card[], dealerUpCard: Card, playerAction: PlayerAction, expectedAction: PlayerAction) => void,
 ) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
@@ -57,6 +58,13 @@ export function useGameState(
       const expectedAction = getBasicStrategyAction(currentHand, gameState.dealerHand, rules);
       const isCorrect = action === expectedAction;
 
+      if (!isCorrect && onIncorrectPlay) {
+        const dealerUpCard = getDealerUpCard(gameState.dealerHand);
+        if (dealerUpCard) {
+          onIncorrectPlay(currentHand.cards, dealerUpCard, action, expectedAction);
+        }
+      }
+
       let newState = applyAction(gameState, action, rules);
 
       if (newState.phase === "playing" && (isBusted(newState.playerHands[newState.currentHandIndex]) || newState.playerHands[newState.currentHandIndex].isStanding)) {
@@ -79,7 +87,7 @@ export function useGameState(
       setGameState(newState);
       setShowCorrectAnswer(!isCorrect);
     },
-    [gameState, rules, onCorrectAnswer, onWrongAnswer],
+    [gameState, rules, onCorrectAnswer, onWrongAnswer, onIncorrectPlay],
   );
 
   const handleDealerPlay = useCallback(() => {

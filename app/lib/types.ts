@@ -78,6 +78,16 @@ export interface SessionStats {
   winnings: number;
 }
 
+export interface IncorrectPlay {
+  id: string;
+  timestamp: number;
+  playerCards: Card[];
+  dealerUpCard: Card;
+  playerAction: PlayerAction;
+  expectedAction: PlayerAction;
+  handDescription: string;
+}
+
 export const DEFAULT_HOUSE_RULES: HouseRules = {
   hitSoft17: false,
   surrenderAllowed: "late",

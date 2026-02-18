@@ -2,14 +2,15 @@
 
 import { useState, useCallback } from "react";
 import { HouseRules, DEFAULT_HOUSE_RULES } from "./lib/types";
-import { SettingsPanel, StatsBar, GameArea } from "./components";
-import { useGameState, useSessionStats } from "./hooks";
+import { SettingsPanel, StatsBar, GameArea, MistakesLog } from "./components";
+import { useGameState, useSessionStats, useIncorrectPlays } from "./hooks";
 
 export default function Home() {
   const [rules, setRules] = useState<HouseRules>(DEFAULT_HOUSE_RULES);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const { stats, recordAnswer, updateWinnings, reset: resetStats } = useSessionStats();
+  const { plays, recordIncorrectPlay, clearPlays, removePlay } = useIncorrectPlays();
   const {
     gameState,
     showCorrectAnswer,
@@ -23,6 +24,7 @@ export default function Home() {
     useCallback(() => recordAnswer(true), [recordAnswer]),
     useCallback(() => recordAnswer(false), [recordAnswer]),
     updateWinnings,
+    recordIncorrectPlay,
   );
 
   const currentHand = gameState?.playerHands[gameState.currentHandIndex];
@@ -59,6 +61,7 @@ export default function Home() {
             ) : (
               <StartButton onStart={startNewGame} />
             )}
+            <MistakesLog plays={plays} onClear={clearPlays} onRemove={removePlay} />
           </div>
         </div>
 
