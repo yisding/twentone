@@ -20,6 +20,7 @@ import {
 } from "./lib/game";
 import { getBasicStrategyAction, actionToString } from "./lib/strategy";
 import { calculateHandValue, isBusted, isBlackjack } from "./lib/deck";
+import { calculateHouseEdge, formatHouseEdge } from "./lib/houseEdge";
 
 interface SessionStats {
   correct: number;
@@ -221,6 +222,20 @@ function SettingsPanel({
 
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-zinc-700">
+              No hole card (European style)
+            </label>
+            <input
+              type="checkbox"
+              checked={rules.noHoleCard}
+              onChange={(e) =>
+                onRulesChange({ ...rules, noHoleCard: e.target.checked })
+              }
+              className="w-5 h-5 rounded"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-zinc-700">
               Blackjack pays
             </label>
             <select
@@ -376,12 +391,13 @@ export default function Home() {
   const startNewGame = useCallback(() => {
     const newGame = initGame(rules);
     const playerHasBlackjack = isBlackjack(newGame.playerHands[0]);
-    const dealerHasBlackjack = isBlackjack(newGame.dealerHand);
+    const dealerHasBlackjack = !rules.noHoleCard && isBlackjack(newGame.dealerHand);
 
     if (playerHasBlackjack || dealerHasBlackjack) {
       newGame.phase = "resolved";
     }
 
+    winningsProcessedRef.current = false;
     setGameState(newGame);
     setShowCorrectAnswer(false);
   }, [rules]);
@@ -490,9 +506,8 @@ export default function Home() {
             />
           </div>
 
-          {gameState && (
-            <div className="p-4 bg-zinc-100 border-b border-zinc-200">
-              <div className="flex items-center justify-center gap-8">
+          <div className="p-4 bg-zinc-100 border-b border-zinc-200">
+            <div className="flex items-center justify-center gap-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
                     {sessionStats.correct}
@@ -538,6 +553,12 @@ export default function Home() {
                   </div>
                   <div className="text-sm text-zinc-500">Winnings</div>
                 </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-zinc-900">
+                    {formatHouseEdge(calculateHouseEdge(rules))}
+                  </div>
+                  <div className="text-sm text-zinc-500">House Edge</div>
+                </div>
                 <button
                   onClick={resetSessionStats}
                   className="text-sm text-zinc-500 hover:text-zinc-700 underline"
@@ -546,7 +567,6 @@ export default function Home() {
                 </button>
               </div>
             </div>
-          )}
 
           <div className="p-6">
             {!gameState ? (
@@ -564,7 +584,11 @@ export default function Home() {
                   <HandDisplay
                     cards={gameState.dealerHand.cards}
                     label="Dealer"
-                    hiddenFirst={gameState.phase === "playing"}
+                    hiddenFirst={
+                      gameState.phase === "playing" &&
+                      !rules.noHoleCard &&
+                      gameState.dealerHand.cards.length === 2
+                    }
                   />
                 </div>
 
@@ -693,7 +717,7 @@ export default function Home() {
                       onClick={handleDealerPlay}
                       className="px-6 py-3 bg-zinc-600 hover:bg-zinc-700 text-white rounded-lg font-semibold"
                     >
-                      Reveal Dealer Card
+                      Dealer Plays
                     </button>
                   </div>
                 )}

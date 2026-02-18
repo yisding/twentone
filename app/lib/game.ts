@@ -32,14 +32,22 @@ export function initGame(rules: HouseRules = DEFAULT_HOUSE_RULES): GameState {
 
   let remainingDeck = deck;
 
-  for (let i = 0; i < 2; i++) {
-    const deal1 = dealCard(remainingDeck);
-    playerHand.cards.push(deal1.card);
-    remainingDeck = deal1.remainingDeck;
+  const deal1 = dealCard(remainingDeck);
+  playerHand.cards.push(deal1.card);
+  remainingDeck = deal1.remainingDeck;
 
-    const deal2 = dealCard(remainingDeck);
-    dealerHand.cards.push(deal2.card);
-    remainingDeck = deal2.remainingDeck;
+  const deal2 = dealCard(remainingDeck);
+  dealerHand.cards.push(deal2.card);
+  remainingDeck = deal2.remainingDeck;
+
+  const deal3 = dealCard(remainingDeck);
+  playerHand.cards.push(deal3.card);
+  remainingDeck = deal3.remainingDeck;
+
+  if (!rules.noHoleCard) {
+    const deal4 = dealCard(remainingDeck);
+    dealerHand.cards.push(deal4.card);
+    remainingDeck = deal4.remainingDeck;
   }
 
   return {
@@ -218,6 +226,15 @@ export function playerSurrender(state: GameState): GameState {
 export function dealerPlay(state: GameState, rules: HouseRules): GameState {
   let currentDeck = state.deck;
   let dealerHand = { ...state.dealerHand };
+
+  if (rules.noHoleCard && dealerHand.cards.length === 1) {
+    const { card, remainingDeck } = dealCard(currentDeck);
+    dealerHand = {
+      ...dealerHand,
+      cards: [...dealerHand.cards, card],
+    };
+    currentDeck = remainingDeck;
+  }
 
   while (true) {
     const { total, isSoft } = calculateHandValue(dealerHand);

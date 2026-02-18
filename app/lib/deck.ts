@@ -89,5 +89,6 @@ export function isPair(hand: Hand): boolean {
 }
 
 export function getDealerUpCard(hand: Hand): Card | null {
+  if (hand.cards.length === 1) return hand.cards[0] || null;
   return hand.cards[1] || null;
 }

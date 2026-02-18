@@ -37,6 +37,7 @@ export interface HouseRules {
   resplitAces: boolean;
   blackjackPays: "3:2" | "6:5" | "1:1";
   decks: number;
+  noHoleCard: boolean;
 }
 
 export interface GameState {
@@ -76,4 +77,5 @@ export const DEFAULT_HOUSE_RULES: HouseRules = {
   resplitAces: false,
   blackjackPays: "3:2",
   decks: 6,
+  noHoleCard: false,
 };
