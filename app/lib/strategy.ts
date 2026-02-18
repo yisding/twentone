@@ -318,6 +318,14 @@ function getPairExplanation(
     }
   }
 
+  if (action === "hit" && pairValue === 7) {
+    return "Splitting 7s against a strong dealer creates two weak hands. Better to hit the 14 as a single hand.";
+  }
+
+  if (action === "hit" && pairValue === 6) {
+    return "Splitting 6s against a strong dealer creates two weak starting hands. Hitting the 12 is safer.";
+  }
+
   return getHardExplanation(pairValue * 2, dealerValue, action, rules, ruleNotes);
 }
 
