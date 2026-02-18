@@ -45,10 +45,17 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
             onChange={(doubleAfterSplit) => onRulesChange({ ...rules, doubleAfterSplit })}
           />
 
-          <ToggleOption
-            label="Double on any two cards"
-            checked={rules.doubleOnAnyTwo}
-            onChange={(doubleOnAnyTwo) => onRulesChange({ ...rules, doubleOnAnyTwo })}
+          <SelectOption
+            label="Double on"
+            value={rules.doubleRestriction}
+            options={[
+              { value: "any", label: "Any two cards" },
+              { value: "9-11", label: "9-11 only" },
+              { value: "10-11", label: "10-11 only" },
+            ]}
+            onChange={(doubleRestriction) =>
+              onRulesChange({ ...rules, doubleRestriction: doubleRestriction as HouseRules["doubleRestriction"] })
+            }
           />
 
           <ToggleOption
@@ -73,6 +80,19 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
             ]}
             onChange={(blackjackPays) =>
               onRulesChange({ ...rules, blackjackPays: blackjackPays as HouseRules["blackjackPays"] })
+            }
+          />
+
+          <SelectOption
+            label="Max split hands"
+            value={rules.maxSplitHands.toString()}
+            options={[
+              { value: "4", label: "4" },
+              { value: "3", label: "3" },
+              { value: "2", label: "2" },
+            ]}
+            onChange={(maxSplitHands) =>
+              onRulesChange({ ...rules, maxSplitHands: parseInt(maxSplitHands) as 2 | 3 | 4 })
             }
           />
 

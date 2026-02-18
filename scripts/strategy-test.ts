@@ -25,7 +25,7 @@ const S17_RULES: HouseRules = {
   hitSoft17: false,
   surrenderAllowed: "late",
   doubleAfterSplit: true,
-  doubleOnAnyTwo: true,
+  doubleRestriction: "any",
 };
 
 const H17_RULES: HouseRules = {

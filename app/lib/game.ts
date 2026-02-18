@@ -79,14 +79,19 @@ export function getAvailableActions(
   actions.push("hit", "stand");
 
   if (canDouble(hand)) {
-    if (rules.doubleOnAnyTwo || (total >= 9 && total <= 11)) {
+    const canDoubleByRestriction =
+      rules.doubleRestriction === "any" ||
+      (rules.doubleRestriction === "9-11" && total >= 9 && total <= 11) ||
+      (rules.doubleRestriction === "10-11" && total >= 10 && total <= 11);
+
+    if (canDoubleByRestriction) {
       if (!hand.isSplit || rules.doubleAfterSplit) {
         actions.push("double");
       }
     }
   }
 
-  if (canSplit(hand) && state.playerHands.length < 4) {
+  if (canSplit(hand) && state.playerHands.length < rules.maxSplitHands) {
     actions.push("split");
   }
 

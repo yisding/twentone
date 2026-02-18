@@ -5,18 +5,19 @@ export function calculateHouseEdge(rules: HouseRules): number {
 
   const deckAdjustments: Record<number, number> = {
     1: -0.48,
-    2: -0.20,
+    2: -0.19,
     4: -0.06,
-    6: 0,
-    8: 0.03,
+    5: -0.03,
+    6: -0.02,
+    8: 0,
   };
-  
+
   if (deckAdjustments[rules.decks] !== undefined) {
     edge += deckAdjustments[rules.decks];
   } else if (rules.decks < 6) {
-    edge += -0.20 + (6 - rules.decks) * 0.05;
-  } else if (rules.decks > 6) {
-    edge += 0.03 + (rules.decks - 8) * 0.01;
+    edge += -0.19 + (6 - rules.decks) * 0.05;
+  } else if (rules.decks > 8) {
+    edge += 0.01 * (rules.decks - 8);
   }
 
   if (rules.hitSoft17) {
@@ -33,12 +34,14 @@ export function calculateHouseEdge(rules: HouseRules): number {
     edge += 0.14;
   }
 
-  if (!rules.doubleOnAnyTwo) {
+  if (rules.doubleRestriction === "9-11") {
+    edge += 0.09;
+  } else if (rules.doubleRestriction === "10-11") {
     edge += 0.18;
   }
 
   if (rules.surrenderAllowed === "none") {
-    edge += 0.08;
+    edge += 0.07;
   } else if (rules.surrenderAllowed === "early") {
     edge -= 0.63;
   }
@@ -49,6 +52,12 @@ export function calculateHouseEdge(rules: HouseRules): number {
 
   if (rules.noHoleCard) {
     edge += 0.11;
+  }
+
+  if (rules.maxSplitHands === 3) {
+    edge += 0.01;
+  } else if (rules.maxSplitHands === 2) {
+    edge += 0.02;
   }
 
   return Math.max(0, edge);

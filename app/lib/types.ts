@@ -29,15 +29,18 @@ export interface Hand {
 
 export type PlayerAction = "hit" | "stand" | "double" | "split" | "surrender";
 
+export type DoubleRestriction = "any" | "9-11" | "10-11";
+
 export interface HouseRules {
   hitSoft17: boolean;
   surrenderAllowed: "none" | "early" | "late";
   doubleAfterSplit: boolean;
-  doubleOnAnyTwo: boolean;
+  doubleRestriction: DoubleRestriction;
   resplitAces: boolean;
   blackjackPays: "3:2" | "6:5" | "1:1";
   decks: number;
   noHoleCard: boolean;
+  maxSplitHands: 2 | 3 | 4;
 }
 
 export interface GameState {
@@ -79,9 +82,10 @@ export const DEFAULT_HOUSE_RULES: HouseRules = {
   hitSoft17: false,
   surrenderAllowed: "late",
   doubleAfterSplit: true,
-  doubleOnAnyTwo: true,
+  doubleRestriction: "any",
   resplitAces: false,
   blackjackPays: "3:2",
   decks: 6,
   noHoleCard: false,
+  maxSplitHands: 4,
 };
