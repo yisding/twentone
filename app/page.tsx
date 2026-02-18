@@ -575,26 +575,26 @@ export default function Home() {
                           </button>
                         ))}
                       </div>
+                    </div>
+                  )}
 
-                      {showCorrectAnswer &&
-                        gameState.lastAction &&
-                        gameState.expectedAction && (
-                          <div
-                            className={`p-4 rounded-lg ${gameState.isCorrect ? "bg-green-100" : "bg-red-100"}`}
-                          >
-                            <p
-                              className={
-                                gameState.isCorrect
-                                  ? "text-green-800"
-                                  : "text-red-800"
-                              }
-                            >
-                              {gameState.isCorrect
-                                ? "✓ Correct!"
-                                : `✗ Incorrect. The correct play was ${actionToString(gameState.expectedAction)}.`}
-                            </p>
-                          </div>
-                        )}
+                {showCorrectAnswer &&
+                  gameState.lastAction &&
+                  gameState.expectedAction && (
+                    <div
+                      className={`p-4 rounded-lg mb-4 ${gameState.isCorrect ? "bg-green-100" : "bg-red-100"}`}
+                    >
+                      <p
+                        className={
+                          gameState.isCorrect
+                            ? "text-green-800"
+                            : "text-red-800"
+                        }
+                      >
+                        {gameState.isCorrect
+                          ? "✓ Correct!"
+                          : `✗ Incorrect. The correct play was ${actionToString(gameState.expectedAction)}.`}
+                      </p>
                     </div>
                   )}
 
