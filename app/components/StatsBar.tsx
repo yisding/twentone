@@ -1,11 +1,5 @@
-import { HouseRules } from "../lib/types";
+import { HouseRules, SessionStats } from "../lib/types";
 import { calculateHouseEdge, formatHouseEdge } from "../lib/houseEdge";
-
-interface SessionStats {
-  correct: number;
-  wrong: number;
-  winnings: number;
-}
 
 interface StatsBarProps {
   stats: SessionStats;
@@ -62,5 +56,3 @@ function Stat({ value, label, color }: StatProps) {
     </div>
   );
 }
-
-export type { SessionStats };

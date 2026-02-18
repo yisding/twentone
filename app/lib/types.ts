@@ -69,6 +69,12 @@ export const RANKS: Rank[] = [
   "K",
 ];
 
+export interface SessionStats {
+  correct: number;
+  wrong: number;
+  winnings: number;
+}
+
 export const DEFAULT_HOUSE_RULES: HouseRules = {
   hitSoft17: false,
   surrenderAllowed: "late",

@@ -1,6 +1,6 @@
-import { getBasicStrategyAction } from "./strategy";
-import { Hand, HouseRules, DEFAULT_HOUSE_RULES, Card } from "./types";
-import { createEmptyHand } from "./game";
+import { getBasicStrategyAction } from "../app/lib/strategy";
+import { Hand, HouseRules, DEFAULT_HOUSE_RULES, Card } from "../app/lib/types";
+import { createEmptyHand } from "../app/lib/game";
 
 function createHand(cards: Card[]): Hand {
   return {

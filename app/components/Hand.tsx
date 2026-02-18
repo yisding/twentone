@@ -1,6 +1,6 @@
 import { Card } from "./Card";
-import { Card as CardType, Hand as HandType } from "../lib/types";
-import { calculateHandValue, isBlackjack } from "../lib/deck";
+import { Card as CardType } from "../lib/types";
+import { calculateCardsValue, isCardsBlackjack } from "../lib/deck";
 
 interface HandProps {
   cards: CardType[];
@@ -9,17 +9,14 @@ interface HandProps {
   isCurrentHand?: boolean;
 }
 
-export function Hand({ cards, label, hiddenFirst = false, isCurrentHand = false }: HandProps) {
-  const tempHand: HandType = {
-    cards,
-    isDoubledDown: false,
-    isSplit: false,
-    isSurrendered: false,
-    isStanding: false,
-  };
-  
-  const { total, isSoft } = calculateHandValue(tempHand);
-  const hasBlackjack = isBlackjack(tempHand);
+export function Hand({
+  cards,
+  label,
+  hiddenFirst = false,
+  isCurrentHand = false,
+}: HandProps) {
+  const { total, isSoft } = calculateCardsValue(cards);
+  const hasBlackjack = isCardsBlackjack(cards);
 
   return (
     <div className={`p-4 rounded-lg ${isCurrentHand ? "ring-2 ring-yellow-400 bg-yellow-50" : ""}`}>

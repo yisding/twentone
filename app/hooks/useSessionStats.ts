@@ -1,10 +1,5 @@
 import { useState, useCallback } from "react";
-
-interface SessionStats {
-  correct: number;
-  wrong: number;
-  winnings: number;
-}
+import { SessionStats } from "../lib/types";
 
 function loadStats(): SessionStats {
   if (typeof window === "undefined") return { correct: 0, wrong: 0, winnings: 0 };

@@ -39,14 +39,14 @@ export function getCardValue(card: Card): number {
   return parseInt(card.rank);
 }
 
-export function calculateHandValue(hand: Hand): {
+export function calculateCardsValue(cards: Card[]): {
   total: number;
   isSoft: boolean;
 } {
   let total = 0;
   let aces = 0;
 
-  for (const card of hand.cards) {
+  for (const card of cards) {
     if (card.rank === "A") {
       aces++;
       total += 11;
@@ -63,15 +63,30 @@ export function calculateHandValue(hand: Hand): {
   return { total, isSoft: aces > 0 };
 }
 
-export function isBlackjack(hand: Hand): boolean {
-  if (hand.cards.length !== 2) return false;
-  const { total } = calculateHandValue(hand);
+export function calculateHandValue(hand: Hand): {
+  total: number;
+  isSoft: boolean;
+} {
+  return calculateCardsValue(hand.cards);
+}
+
+export function isCardsBlackjack(cards: Card[]): boolean {
+  if (cards.length !== 2) return false;
+  const { total } = calculateCardsValue(cards);
   return total === 21;
 }
 
-export function isBusted(hand: Hand): boolean {
-  const { total } = calculateHandValue(hand);
+export function isBlackjack(hand: Hand): boolean {
+  return isCardsBlackjack(hand.cards);
+}
+
+export function areCardsBusted(cards: Card[]): boolean {
+  const { total } = calculateCardsValue(cards);
   return total > 21;
+}
+
+export function isBusted(hand: Hand): boolean {
+  return areCardsBusted(hand.cards);
 }
 
 export function canSplit(hand: Hand): boolean {
