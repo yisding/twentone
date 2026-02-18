@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:strategy": "tsx scripts/strategy-test.ts",
-    "test:house-edge": "tsx scripts/house-edge-test.ts"
+    "test:house-edge": "tsx scripts/house-edge-test.ts",
+    "simulate": "tsx scripts/simulate-house-edge.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

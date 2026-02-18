@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { SimulationPanel } from "./SimulationPanel";
 
 interface SettingsPanelProps {
   rules: HouseRules;
@@ -110,6 +111,11 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
           />
 
           <DeckSelector decks={rules.decks} onChange={(decks) => onRulesChange({ ...rules, decks })} />
+
+          <div className="pt-4 border-t border-zinc-200">
+            <div className="text-sm font-medium mb-3">Simulation</div>
+            <SimulationPanel rules={rules} />
+          </div>
         </div>
       )}
     </div>

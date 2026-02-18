@@ -4,4 +4,5 @@ export { Hand } from "./Hand";
 export { SettingsPanel } from "./SettingsPanel";
 export { StatsBar } from "./StatsBar";
 export { MistakesLog } from "./MistakesLog";
+export { SimulationPanel } from "./SimulationPanel";
 export type { SessionStats } from "../lib/types";
