@@ -19,7 +19,7 @@ export function useGameState(
   onCorrectAnswer: () => void,
   onWrongAnswer: () => void,
   onWinnings: (amount: number) => void,
-  onIncorrectPlay?: (playerCards: Card[], dealerUpCard: Card, playerAction: PlayerAction, expectedAction: PlayerAction) => void,
+  onIncorrectPlay?: (playerCards: Card[], dealerUpCard: Card, playerAction: PlayerAction, expectedAction: PlayerAction, rules: HouseRules) => void,
 ) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
@@ -61,7 +61,7 @@ export function useGameState(
       if (!isCorrect && onIncorrectPlay) {
         const dealerUpCard = getDealerUpCard(gameState.dealerHand);
         if (dealerUpCard) {
-          onIncorrectPlay(currentHand.cards, dealerUpCard, action, expectedAction);
+          onIncorrectPlay(currentHand.cards, dealerUpCard, action, expectedAction, rules);
         }
       }
 

@@ -86,6 +86,7 @@ export interface IncorrectPlay {
   playerAction: PlayerAction;
   expectedAction: PlayerAction;
   handDescription: string;
+  explanation: string;
 }
 
 export const DEFAULT_HOUSE_RULES: HouseRules = {

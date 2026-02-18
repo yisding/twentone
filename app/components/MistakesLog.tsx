@@ -61,6 +61,9 @@ function MistakeItem({ play, onRemove }: { play: IncorrectPlay; onRemove: () => 
           {" → "}
           Correct: <span className="font-medium">{actionToString(play.expectedAction)}</span>
         </div>
+        <div className="text-xs text-zinc-600 mt-1 italic">
+          {play.explanation}
+        </div>
         <div className="text-xs text-zinc-400 mt-1">{timeAgo}</div>
       </div>
       <Button variant="ghost" size="sm" onClick={onRemove} className="text-zinc-400 hover:text-zinc-600 p-1 h-auto">

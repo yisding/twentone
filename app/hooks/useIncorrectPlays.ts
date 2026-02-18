@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
-import { IncorrectPlay, Card, PlayerAction } from "../lib/types";
-import { calculateCardsValue, isPair } from "../lib/deck";
+import { IncorrectPlay, Card, PlayerAction, HouseRules } from "../lib/types";
+import { calculateCardsValue, isPair, getCardValue } from "../lib/deck";
+import { getStrategyExplanation } from "../lib/strategy";
 
 function loadPlays(): IncorrectPlay[] {
   if (typeof window === "undefined") return [];
@@ -32,7 +33,14 @@ export function useIncorrectPlays() {
   const [plays, setPlays] = useState<IncorrectPlay[]>(loadPlays);
 
   const recordIncorrectPlay = useCallback(
-    (playerCards: Card[], dealerUpCard: Card, playerAction: PlayerAction, expectedAction: PlayerAction) => {
+    (playerCards: Card[], dealerUpCard: Card, playerAction: PlayerAction, expectedAction: PlayerAction, rules: HouseRules) => {
+      const dealerValue = getCardValue(dealerUpCard);
+      const explanation = getStrategyExplanation(
+        { cards: playerCards, isDoubledDown: false, isSplit: false, isSurrendered: false, isStanding: false },
+        dealerValue,
+        expectedAction,
+        rules,
+      );
       const play: IncorrectPlay = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         timestamp: Date.now(),
@@ -41,6 +49,7 @@ export function useIncorrectPlays() {
         playerAction,
         expectedAction,
         handDescription: describeHand(playerCards),
+        explanation,
       };
       setPlays((prev) => {
         const newPlays = [play, ...prev].slice(0, 100);
