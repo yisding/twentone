@@ -23,7 +23,7 @@ function savePlays(plays: IncorrectPlay[]) {
 
 function describeHand(cards: Card[]): string {
   const { total, isSoft } = calculateCardsValue(cards);
-  if (isPair({ cards, isDoubledDown: false, isSplit: false, isSurrendered: false, isStanding: false }) && cards.length === 2) {
+  if (isPair({ cards, isDoubledDown: false, isSplit: false, isSplitAces: false, isSurrendered: false, isStanding: false }) && cards.length === 2) {
     return `Pair of ${cards[0].rank}s`;
   }
   return `${isSoft ? "Soft" : "Hard"} ${total}`;
@@ -36,7 +36,7 @@ export function useIncorrectPlays() {
     (playerCards: Card[], dealerUpCard: Card, playerAction: PlayerAction, expectedAction: PlayerAction, rules: HouseRules) => {
       const dealerValue = getCardValue(dealerUpCard);
       const explanation = getStrategyExplanation(
-        { cards: playerCards, isDoubledDown: false, isSplit: false, isSurrendered: false, isStanding: false },
+        { cards: playerCards, isDoubledDown: false, isSplit: false, isSplitAces: false, isSurrendered: false, isStanding: false },
         dealerValue,
         expectedAction,
         rules,

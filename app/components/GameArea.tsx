@@ -38,7 +38,7 @@ export function GameArea({
         <Hand
           cards={dealerCards}
           label="Dealer"
-          hiddenFirst={
+          hideHoleCard={
             gameState.phase === "playing" &&
             !rules.noHoleCard &&
             dealerCards.length === 2

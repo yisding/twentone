@@ -23,6 +23,7 @@ export interface Hand {
   cards: Card[];
   isDoubledDown: boolean;
   isSplit: boolean;
+  isSplitAces: boolean;
   isSurrendered: boolean;
   isStanding: boolean;
 }

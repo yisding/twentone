@@ -20,6 +20,7 @@ export function createEmptyHand(): Hand {
     cards: [],
     isDoubledDown: false,
     isSplit: false,
+    isSplitAces: false,
     isSurrendered: false,
     isStanding: false,
   };
@@ -75,6 +76,19 @@ export function getAvailableActions(
   }
 
   const { total } = calculateHandValue(hand);
+
+  if (hand.isSplitAces && hand.cards.length === 2) {
+    actions.push("stand");
+    const canResplitAces = 
+      hand.cards[0].rank === "A" && 
+      hand.cards[1].rank === "A" &&
+      rules.resplitAces &&
+      state.playerHands.length < rules.maxSplitHands;
+    if (canResplitAces) {
+      actions.push("split");
+    }
+    return actions;
+  }
 
   actions.push("hit", "stand");
 
@@ -181,6 +195,7 @@ export function playerDouble(state: GameState): GameState {
 export function playerSplit(state: GameState): GameState {
   const hand = state.playerHands[state.currentHandIndex];
   const [card1, card2] = hand.cards;
+  const isSplittingAces = card1.rank === "A";
 
   let remainingDeck = state.deck;
   const deal1 = dealCard(remainingDeck);
@@ -192,6 +207,7 @@ export function playerSplit(state: GameState): GameState {
     cards: [card1, deal1.card],
     isDoubledDown: false,
     isSplit: true,
+    isSplitAces: isSplittingAces || hand.isSplitAces,
     isSurrendered: false,
     isStanding: false,
   };
@@ -200,6 +216,7 @@ export function playerSplit(state: GameState): GameState {
     cards: [card2, deal2.card],
     isDoubledDown: false,
     isSplit: true,
+    isSplitAces: isSplittingAces || hand.isSplitAces,
     isSurrendered: false,
     isStanding: false,
   };
@@ -273,10 +290,12 @@ export function getHandResult(
 
   const playerValue = calculateHandValue(playerHand).total;
   const dealerValue = calculateHandValue(dealerHand).total;
+  const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplitAces;
+  const dealerIsBlackjack = isBlackjack(dealerHand);
 
   if (isBusted(playerHand)) return "lose";
-  if (isBlackjack(playerHand) && !isBlackjack(dealerHand)) return "blackjack";
-  if (isBlackjack(dealerHand) && !isBlackjack(playerHand)) return "lose";
+  if (playerIsBlackjack && !dealerIsBlackjack) return "blackjack";
+  if (dealerIsBlackjack && !playerIsBlackjack) return "lose";
   if (playerValue > 21) return "lose";
   if (dealerValue > 21) return "win";
   if (playerValue > dealerValue) return "win";
