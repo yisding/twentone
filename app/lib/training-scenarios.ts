@@ -211,8 +211,8 @@ export const TRAINING_SCENARIOS: TrainingScenario[] = [
     description: "Soft 13 vs Dealer 6",
     playerCards: [createCard("A", H), createCard("2", D)],
     dealerUpCard: createCard("6", S),
-    expectedAction: "hit",
-    explanation: "Soft 13 is too weak to double. Hit to try to improve.",
+    expectedAction: "double",
+    explanation: "Double soft 13 against dealer 5-6. Can't bust, good chance to improve.",
     difficulty: 3,
   },
   {
