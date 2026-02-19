@@ -119,7 +119,7 @@ export function useGameState(
       }
 
       setGameState(newState);
-      setShowCorrectAnswer(!isCorrect);
+      setShowCorrectAnswer(true);
     },
     [gameState, rules, onCorrectAnswer, onWrongAnswer, onIncorrectPlay],
   );

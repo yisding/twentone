@@ -2,7 +2,7 @@ import { Hand } from "./Hand";
 import { GameState, HouseRules, PlayerAction, Hand as HandType } from "../lib/types";
 import { isBusted, isCardsBlackjack } from "../lib/deck";
 import { getHandResult } from "../lib/game";
-import { computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
+import { computeAvailableActionEVs, computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
 import { actionToString, getActionVariant, getActionColor } from "../lib/format";
 import type { StrategyTable } from "../lib/ev-calculator";
 import { Button } from "@/components/ui/button";
@@ -200,6 +200,11 @@ function FeedbackMessage({
     ? "Correct!"
     : `Incorrect. The correct play was ${actionToString(expectedAction)}.`;
 
+  const actionEVs = actedHand
+    ? computeAvailableActionEVs(actedHand, dealerHand, rules, strategyTable)
+        .sort((a, b) => b.ev - a.ev)
+    : [];
+
   const evCost = !isCorrect && actedHand
     ? computeEVCost(actedHand, dealerHand, lastAction, rules, strategyTable)
     : null;
@@ -217,21 +222,35 @@ function FeedbackMessage({
           <span aria-hidden="true">{isCorrect ? "✓" : "✗"}</span> {message}
         </Badge>
       </div>
-      {evCost && !isCorrect && (
+      {actionEVs.length > 0 && (
         <div className="text-center">
-          <div className="inline-block bg-red-50 border border-red-200 rounded-lg px-4 py-2">
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-red-700 font-medium">
-                {actionToString(expectedAction)}: {formatEV(evCost.optimalEV)}
-              </span>
-              <span className="text-zinc-400">|</span>
-              <span className="text-zinc-600">
-                {actionToString(lastAction)}: {formatEV(evCost.chosenEV)}
-              </span>
+          <div className={cn(
+            "inline-block rounded-lg px-4 py-2",
+            isCorrect
+              ? "bg-green-50 border border-green-200"
+              : "bg-red-50 border border-red-200"
+          )}>
+            <div className="flex items-center gap-3 text-sm flex-wrap justify-center">
+              {actionEVs.map((a, i) => (
+                <span key={a.action} className="flex items-center gap-3">
+                  {i > 0 && <span className="text-zinc-400">|</span>}
+                  <span className={cn(
+                    a.action === expectedAction
+                      ? isCorrect ? "text-green-700 font-medium" : "text-red-700 font-medium"
+                      : a.action === lastAction && !isCorrect
+                        ? "text-zinc-600 font-medium"
+                        : "text-zinc-500"
+                  )}>
+                    {actionToString(a.action)}: {formatEV(a.ev)}
+                  </span>
+                </span>
+              ))}
             </div>
-            <div className="mt-1 text-xs text-red-600 font-medium">
-              Cost: {formatEVLoss(evCost.evLoss)} of your bet
-            </div>
+            {!isCorrect && evCost && (
+              <div className="mt-1 text-xs text-red-600 font-medium">
+                Cost: {formatEVLoss(evCost.evLoss)} of your bet
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -235,6 +235,61 @@ function lookupStrategyEntry(
   return strategyTable.hard.get(total)?.get(dealerValue) ?? null;
 }
 
+function buildAvailableActionEVsFromStrategyEntry(
+  playerHand: Hand,
+  rules: HouseRules,
+  entry: StrategyEntry,
+): ActionEV[] {
+  const isTwoCardHand = playerHand.cards.length === 2;
+  const isPair = isTwoCardHand &&
+    playerHand.cards[0].rank === playerHand.cards[1].rank;
+  const { total } = calculateHandValue(playerHand);
+
+  const available: ActionEV[] = [
+    { action: "stand", ev: entry.evs.stand, isAvailable: true },
+    { action: "hit", ev: entry.evs.hit, isAvailable: true },
+  ];
+
+  if (entry.evs.double !== undefined && isTwoCardHand &&
+      canDouble(total, rules) &&
+      (!playerHand.isSplit || rules.doubleAfterSplit)) {
+    available.push({ action: "double", ev: entry.evs.double, isAvailable: true });
+  }
+
+  if (entry.evs.split !== undefined && isPair &&
+      rules.maxSplitHands >= 2 && !playerHand.isSplit) {
+    available.push({ action: "split", ev: entry.evs.split, isAvailable: true });
+  }
+
+  if (entry.evs.surrender !== undefined &&
+      rules.surrenderAllowed !== "none" && isTwoCardHand && !playerHand.isSplit) {
+    available.push({ action: "surrender", ev: entry.evs.surrender, isAvailable: true });
+  }
+
+  return available;
+}
+
+export function computeAvailableActionEVs(
+  playerHand: Hand,
+  dealerHand: Hand,
+  rules: HouseRules,
+  strategyTable?: StrategyTable | null,
+): ActionEV[] {
+  const dealerUpCard = getDealerUpCard(dealerHand);
+  if (!dealerUpCard) return [];
+  const dealerValue = getCardValue(dealerUpCard);
+
+  const entry = strategyTable
+    ? lookupStrategyEntry(playerHand, dealerValue, strategyTable)
+    : null;
+
+  if (entry?.evs) {
+    return buildAvailableActionEVsFromStrategyEntry(playerHand, rules, entry);
+  }
+
+  return computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
+}
+
 export function computeEVCost(
   playerHand: Hand,
   dealerHand: Hand,
@@ -242,73 +297,20 @@ export function computeEVCost(
   rules: HouseRules,
   strategyTable?: StrategyTable | null,
 ): EVCostInfo | null {
-  const dealerUpCard = getDealerUpCard(dealerHand);
-  if (!dealerUpCard) return null;
-  const dealerValue = getCardValue(dealerUpCard);
-
-  // Try to use precomputed strategy table EVs (composition-dependent, more accurate)
-  const entry = strategyTable
-    ? lookupStrategyEntry(playerHand, dealerValue, strategyTable)
-    : null;
-
-  if (entry?.evs) {
-    const isTwoCardHand = playerHand.cards.length === 2;
-    const isPair = isTwoCardHand &&
-      playerHand.cards[0].rank === playerHand.cards[1].rank;
-    const { total } = calculateHandValue(playerHand);
-
-    // Build available action EVs from the strategy table entry
-    const available: ActionEV[] = [
-      { action: "stand" as PlayerAction, ev: entry.evs.stand, isAvailable: true },
-      { action: "hit" as PlayerAction, ev: entry.evs.hit, isAvailable: true },
-    ];
-
-    if (entry.evs.double !== undefined && isTwoCardHand &&
-        canDouble(total, rules) &&
-        (!playerHand.isSplit || rules.doubleAfterSplit)) {
-      available.push({ action: "double" as PlayerAction, ev: entry.evs.double, isAvailable: true });
-    }
-
-    if (entry.evs.split !== undefined && isPair &&
-        rules.maxSplitHands >= 2 && !playerHand.isSplit) {
-      available.push({ action: "split" as PlayerAction, ev: entry.evs.split, isAvailable: true });
-    }
-
-    if (entry.evs.surrender !== undefined &&
-        rules.surrenderAllowed !== "none" && isTwoCardHand && !playerHand.isSplit) {
-      available.push({ action: "surrender" as PlayerAction, ev: entry.evs.surrender, isAvailable: true });
-    }
-
-    const optimal = available.reduce((best, curr) =>
-      curr.ev > best.ev ? curr : best
-    );
-    const chosen = available.find(a => a.action === chosenAction);
-    if (!chosen) return null;
-
-    const evLoss = optimal.ev - chosen.ev;
-    return {
-      optimalAction: optimal.action,
-      optimalEV: optimal.ev,
-      chosenAction: chosen.action,
-      chosenEV: chosen.ev,
-      evLoss,
-      evLossPercent: formatEvLossPercent(evLoss),
-    };
-  }
-
-  // Fallback: infinite deck approximation
-  const actionEVs = computeActionEVs(playerHand, dealerHand, rules);
-  if (actionEVs.length === 0) return null;
-
-  const availableActions = actionEVs.filter(a => a.isAvailable);
+  const availableActions = computeAvailableActionEVs(
+    playerHand,
+    dealerHand,
+    rules,
+    strategyTable,
+  );
   if (availableActions.length === 0) return null;
 
   const optimal = availableActions.reduce((best, curr) =>
     curr.ev > best.ev ? curr : best
   );
 
-  const chosen = actionEVs.find(a => a.action === chosenAction);
-  if (!chosen || !chosen.isAvailable) return null;
+  const chosen = availableActions.find(a => a.action === chosenAction);
+  if (!chosen) return null;
 
   const evLoss = optimal.ev - chosen.ev;
   return {
