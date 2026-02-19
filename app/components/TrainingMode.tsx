@@ -16,6 +16,7 @@ import {
 } from "../lib/training-scenarios";
 import { calculateCardsValue } from "../lib/deck";
 import { computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
+import { actionToString, getActionVariant, getActionColor } from "../lib/format";
 
 interface TrainingModeProps {
   currentScenario: TrainingScenario | null;
@@ -250,52 +251,23 @@ function ActionButtons({
   onAction: (action: PlayerAction) => void;
   disabled: boolean;
 }) {
-  const actionVariants: Record<
-    PlayerAction,
-    "default" | "secondary" | "destructive" | "outline"
-  > = {
-    hit: "default",
-    stand: "secondary",
-    double: "default",
-    split: "default",
-    surrender: "destructive",
-  };
-
-  const actionColors: Record<PlayerAction, string> = {
-    hit: "bg-blue-600 hover:bg-blue-700",
-    stand: "",
-    double: "bg-purple-600 hover:bg-purple-700",
-    split: "bg-orange-600 hover:bg-orange-700",
-    surrender: "",
-  };
-
   return (
     <div className="flex flex-wrap gap-2 justify-center">
       {actions.map((action) => (
         <Button
           key={action}
-          variant={actionVariants[action]}
+          variant={getActionVariant(action)}
           size="lg"
           onClick={() => onAction(action)}
           disabled={disabled}
-          className={actionColors[action]}
+          className={getActionColor(action)}
+          aria-label={actionToString(action)}
         >
           {actionToString(action)}
         </Button>
       ))}
     </div>
   );
-}
-
-function actionToString(action: PlayerAction): string {
-  const map: Record<PlayerAction, string> = {
-    hit: "Hit",
-    stand: "Stand",
-    double: "Double Down",
-    split: "Split",
-    surrender: "Surrender",
-  };
-  return map[action];
 }
 
 function FeedbackMessage({
@@ -343,7 +315,7 @@ function FeedbackMessage({
           variant={isCorrect ? "default" : "destructive"}
           className={cn("text-base px-4 py-2", isCorrect && "bg-green-600")}
         >
-          {isCorrect ? "✓" : "✗"} {message}
+          <span aria-hidden="true">{isCorrect ? "✓" : "✗"}</span> {message}
         </Badge>
       </div>
       {evCost && !isCorrect && expectedAction && chosenAction && (

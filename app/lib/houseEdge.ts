@@ -6,16 +6,16 @@ export function calculateHouseEdge(rules: HouseRules): number {
   const deckAdjustments: Record<number, number> = {
     1: -0.48,
     2: -0.19,
+    3: -0.13,
     4: -0.06,
     5: -0.03,
     6: -0.02,
+    7: -0.01,
     8: 0,
   };
 
   if (deckAdjustments[rules.decks] !== undefined) {
     edge += deckAdjustments[rules.decks];
-  } else if (rules.decks < 6) {
-    edge += -0.19 + (6 - rules.decks) * 0.05;
   } else if (rules.decks > 8) {
     edge += 0.01 * (rules.decks - 8);
   }
@@ -60,7 +60,7 @@ export function calculateHouseEdge(rules: HouseRules): number {
     edge += 0.02;
   }
 
-  return Math.max(0, edge);
+  return edge;
 }
 
 export function formatHouseEdge(edge: number): string {

@@ -1,5 +1,7 @@
-import { IncorrectPlay } from "../lib/types";
+import { IncorrectPlay, PlayerAction } from "../lib/types";
+import { actionToString } from "../lib/format";
 import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 interface MistakesLogProps {
@@ -18,11 +20,11 @@ export function MistakesLog({ plays, onClear, onRemove }: MistakesLogProps) {
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-zinc-900"
+          className="flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+          aria-expanded={isOpen}
+          aria-label={`Mistakes log, ${plays.length} items`}
         >
-          <span className="transform transition-transform" style={{ display: "inline-block", transform: isOpen ? "rotate(90deg)" : "" }}>
-            ▶
-          </span>
+          <ChevronRight className={`size-4 transition-transform ${isOpen ? "rotate-90" : ""}`} />
           Mistakes ({plays.length})
         </button>
         {plays.length > 0 && (
@@ -57,31 +59,20 @@ function MistakeItem({ play, onRemove }: { play: IncorrectPlay; onRemove: () => 
           {play.handDescription} vs Dealer {play.dealerUpCard.rank}
         </div>
         <div className="text-red-600">
-          You: <span className="font-medium">{actionToString(play.playerAction)}</span>
+          You: <span className="font-medium">{actionToString(play.playerAction as PlayerAction)}</span>
           {" → "}
-          Correct: <span className="font-medium">{actionToString(play.expectedAction)}</span>
+          Correct: <span className="font-medium">{actionToString(play.expectedAction as PlayerAction)}</span>
         </div>
         <div className="text-xs text-zinc-600 mt-1 italic">
           {play.explanation}
         </div>
         <div className="text-xs text-zinc-400 mt-1">{timeAgo}</div>
       </div>
-      <Button variant="ghost" size="sm" onClick={onRemove} className="text-zinc-400 hover:text-zinc-600 p-1 h-auto">
+      <Button variant="ghost" size="sm" onClick={onRemove} className="text-zinc-400 hover:text-zinc-600 p-1 h-auto" aria-label="Remove mistake">
         ✕
       </Button>
     </div>
   );
-}
-
-function actionToString(action: string): string {
-  const map: Record<string, string> = {
-    hit: "Hit",
-    stand: "Stand",
-    double: "Double",
-    split: "Split",
-    surrender: "Surrender",
-  };
-  return map[action] || action;
 }
 
 function formatTimeAgo(timestamp: number): string {

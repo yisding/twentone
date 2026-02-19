@@ -131,12 +131,19 @@ export function playerHit(state: GameState): GameState {
     cards: [...hand.cards, card],
   };
 
+  const busted = isBusted(newHands[state.currentHandIndex]);
   let newPhase = state.phase;
-  if (isBusted(newHands[state.currentHandIndex])) {
-    newPhase =
-      state.currentHandIndex === state.playerHands.length - 1
-        ? "resolved"
-        : state.phase;
+  let newHandIndex = state.currentHandIndex;
+
+  if (busted) {
+    const allResolved = newHands.every(
+      (h) => h.isStanding || isBusted(h) || h.isSurrendered,
+    );
+    if (allResolved) {
+      newPhase = "resolved";
+    } else if (state.currentHandIndex < state.playerHands.length - 1) {
+      newHandIndex = state.currentHandIndex + 1;
+    }
   }
 
   return {
@@ -144,6 +151,7 @@ export function playerHit(state: GameState): GameState {
     playerHands: newHands,
     deck: remainingDeck,
     phase: newPhase,
+    currentHandIndex: newHandIndex,
   };
 }
 
@@ -239,10 +247,19 @@ export function playerSurrender(state: GameState): GameState {
     isSurrendered: true,
   };
 
+  const allResolved = newHands.every(
+    (h) => h.isStanding || isBusted(h) || h.isSurrendered,
+  );
+
+  const isLastHand = state.currentHandIndex === state.playerHands.length - 1;
+
   return {
     ...state,
     playerHands: newHands,
-    phase: "resolved",
+    phase: allResolved ? "dealer" : state.phase,
+    currentHandIndex: isLastHand
+      ? state.currentHandIndex
+      : state.currentHandIndex + 1,
   };
 }
 

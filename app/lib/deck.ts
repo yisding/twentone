@@ -28,6 +28,9 @@ export function shuffle(deck: Card[]): Card[] {
 }
 
 export function dealCard(deck: Card[]): { card: Card; remainingDeck: Card[] } {
+  if (deck.length === 0) {
+    throw new Error("Cannot deal from an empty deck");
+  }
   const card = deck[0];
   const remainingDeck = deck.slice(1);
   return { card, remainingDeck };
@@ -36,7 +39,7 @@ export function dealCard(deck: Card[]): { card: Card; remainingDeck: Card[] } {
 export function getCardValue(card: Card): number {
   if (["J", "Q", "K"].includes(card.rank)) return 10;
   if (card.rank === "A") return 11;
-  return parseInt(card.rank);
+  return parseInt(card.rank, 10);
 }
 
 export function calculateCardsValue(cards: Card[]): {

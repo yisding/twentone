@@ -365,7 +365,7 @@ export function simulateHouseEdge(
     }
   }
 
-  const houseEdge = ((totalBet - totalReturned) / totalBet) * 100;
+  const houseEdge = totalBet > 0 ? ((totalBet - totalReturned) / totalBet) * 100 : 0;
 
   return {
     handsPlayed: numHands,

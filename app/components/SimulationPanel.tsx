@@ -29,7 +29,8 @@ export function SimulationPanel({ rules }: SimulationPanelProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Simulation failed");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Simulation failed: ${response.status}${errorData.error ? ` - ${errorData.error}` : ""}`);
       }
 
       const data = await response.json();

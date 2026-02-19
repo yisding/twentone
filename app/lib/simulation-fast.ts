@@ -403,8 +403,8 @@ export function simulateHouseEdge(
   let surrenders = 0;
 
   for (let i = 0; i < numHands; i++) {
-    // Check reshuffle
-    if (shoeSize - deckIdx < rc.minCards) {
+    // Check reshuffle — ensure enough cards for a full round (worst case ~30 cards)
+    if (shoeSize - deckIdx < Math.max(rc.minCards, 30)) {
       shuffleShoe(shoe);
       deckIdx = 0;
     }
@@ -657,7 +657,7 @@ export function simulateHouseEdge(
     if (onProgress && i % 1000 === 0) onProgress(i, numHands);
   }
 
-  const houseEdge = ((totalBet - totalReturned) / totalBet) * 100;
+  const houseEdge = totalBet > 0 ? ((totalBet - totalReturned) / totalBet) * 100 : 0;
 
   return {
     handsPlayed: numHands,

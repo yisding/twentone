@@ -12,16 +12,7 @@
  */
 
 import { HouseRules, DEFAULT_HOUSE_RULES } from "./types";
-
-// === Card value probabilities ===
-// 10, J, Q, K all have value 10 → combined probability 4/13 (infinite deck)
-// Ace starts as value 11 → probability 1/13 (infinite deck)
-const CARD_VALUES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
-const INFINITE_DECK_PROBS = [
-  1 / 13, 1 / 13, 1 / 13, 1 / 13, 1 / 13, 1 / 13, 1 / 13, 1 / 13, 4 / 13,
-  1 / 13,
-];
-const N = 10; // number of distinct card values
+import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
 
 // Module-level mutable probability source (defaults to infinite deck)
 const currentProbs = INFINITE_DECK_PROBS.slice();
@@ -59,23 +50,6 @@ function shoeToProbs(shoe: number[], total: number): void {
 
 function setInfiniteProbs(): void {
   for (let i = 0; i < N; i++) currentProbs[i] = INFINITE_DECK_PROBS[i];
-}
-
-// === Hand arithmetic ===
-
-function addCard(
-  total: number,
-  isSoft: boolean,
-  cardValue: number,
-): [number, boolean] {
-  let softAces = isSoft ? 1 : 0;
-  let t = total + cardValue;
-  if (cardValue === 11) softAces++;
-  while (t > 21 && softAces > 0) {
-    t -= 10;
-    softAces--;
-  }
-  return [t, softAces > 0];
 }
 
 // === Dealer outcome distributions ===
@@ -503,7 +477,9 @@ export function calculateFiniteDeckEV(
   }
 
   // Normalize (totalWeight ≈ 1, but normalize for floating point safety)
-  totalEV /= totalWeight;
+  if (totalWeight > 1e-10) {
+    totalEV /= totalWeight;
+  }
 
   return {
     playerEV: totalEV,
@@ -765,7 +741,9 @@ export function calculateCDEV(
     shoe[ui]++;
   }
 
-  totalEV /= totalW;
+  if (totalW > 1e-10) {
+    totalEV /= totalW;
+  }
   return {
     playerEV: totalEV,
     houseEdge: -totalEV,

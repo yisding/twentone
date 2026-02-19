@@ -3,6 +3,7 @@ import { GameState, HouseRules, PlayerAction, Hand as HandType } from "../lib/ty
 import { isBusted, isCardsBlackjack } from "../lib/deck";
 import { getHandResult } from "../lib/game";
 import { computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
+import { actionToString, getActionVariant, getActionColor } from "../lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -154,32 +155,17 @@ function ActionButtons({
   actions: PlayerAction[];
   onAction: (action: PlayerAction) => void;
 }) {
-  const actionVariants: Record<PlayerAction, "default" | "secondary" | "destructive" | "outline"> = {
-    hit: "default",
-    stand: "secondary",
-    double: "default",
-    split: "default",
-    surrender: "destructive",
-  };
-
-  const actionColors: Record<PlayerAction, string> = {
-    hit: "bg-blue-600 hover:bg-blue-700",
-    stand: "",
-    double: "bg-purple-600 hover:bg-purple-700",
-    split: "bg-orange-600 hover:bg-orange-700",
-    surrender: "",
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 justify-center">
         {actions.map((action) => (
           <Button
             key={action}
-            variant={actionVariants[action]}
+            variant={getActionVariant(action)}
             size="lg"
             onClick={() => onAction(action)}
-            className={actionColors[action]}
+            className={getActionColor(action)}
+            aria-label={actionToString(action)}
           >
             {actionToString(action)}
           </Button>
@@ -187,17 +173,6 @@ function ActionButtons({
       </div>
     </div>
   );
-}
-
-function actionToString(action: PlayerAction): string {
-  const map: Record<PlayerAction, string> = {
-    hit: "Hit",
-    stand: "Stand",
-    double: "Double Down",
-    split: "Split",
-    surrender: "Surrender",
-  };
-  return map[action];
 }
 
 function FeedbackMessage({
@@ -233,7 +208,7 @@ function FeedbackMessage({
             isCorrect && "bg-green-600"
           )}
         >
-          {isCorrect ? "✓" : "✗"} {message}
+          <span aria-hidden="true">{isCorrect ? "✓" : "✗"}</span> {message}
         </Badge>
       </div>
       {evCost && !isCorrect && (
@@ -280,6 +255,22 @@ function TransitionButton({
   );
 }
 
+const RESULT_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  win: "default",
+  blackjack: "default",
+  push: "secondary",
+  surrender: "outline",
+  lose: "destructive",
+};
+
+const RESULT_COLORS: Record<string, string> = {
+  win: "bg-green-600",
+  blackjack: "bg-green-600",
+  push: "bg-yellow-500",
+  surrender: "",
+  lose: "",
+};
+
 function GameResults({
   gameState,
   onNewGame,
@@ -287,21 +278,6 @@ function GameResults({
   gameState: GameState;
   onNewGame: () => void;
 }) {
-  const resultVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-    win: "default",
-    blackjack: "default",
-    push: "secondary",
-    surrender: "outline",
-    lose: "destructive",
-  };
-
-  const resultColors: Record<string, string> = {
-    win: "bg-green-600",
-    blackjack: "bg-green-600",
-    push: "bg-yellow-500",
-    surrender: "",
-    lose: "",
-  };
 
   return (
     <div className="space-y-4">
@@ -311,8 +287,8 @@ function GameResults({
           return (
             <Badge
               key={i}
-              variant={resultVariants[result]}
-              className={cn("text-base px-4 py-2", resultColors[result])}
+              variant={RESULT_VARIANTS[result]}
+              className={cn("text-base px-4 py-2", RESULT_COLORS[result])}
             >
               Hand {i + 1}: {result.charAt(0).toUpperCase() + result.slice(1)}
             </Badge>

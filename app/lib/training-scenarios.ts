@@ -521,25 +521,10 @@ export function getScenariosForRules(
   });
 }
 
-export function getExpectedActionForRules(
-  scenario: TrainingScenario,
-  rules: HouseRules,
-): TrainingScenario["expectedAction"] {
-  if (!scenario.rulesVariants || scenario.rulesVariants.length === 0) {
-    return scenario.expectedAction;
-  }
-
-  for (const variant of scenario.rulesVariants) {
-    const matches = Object.entries(variant).every(([key, value]) => {
-      return rules[key as keyof HouseRules] === value;
-    });
-    if (matches) {
-      return scenario.expectedAction;
-    }
-  }
-
-  return scenario.expectedAction;
-}
+// Note: Expected action for a given ruleset is computed dynamically via
+// getBasicStrategyAction() in useTrainingMode.ts, not from static scenario data.
+// The rulesVariants field on scenarios is used for filtering which scenarios
+// are relevant to the current ruleset (see getScenariosForRules).
 
 export const CATEGORY_LABELS: Record<TrainingScenario["category"], string> = {
   splits: "Split Decisions",

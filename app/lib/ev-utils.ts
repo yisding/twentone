@@ -1,24 +1,8 @@
 import { Hand, HouseRules, PlayerAction } from "./types";
 import { calculateHandValue, getCardValue, getDealerUpCard } from "./deck";
-
-const CARD_VALUES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
-const N = 10;
-const INFINITE_DECK_PROBS = [
-  1 / 13, 1 / 13, 1 / 13, 1 / 13, 1 / 13, 1 / 13, 1 / 13, 1 / 13, 4 / 13, 1 / 13,
-];
+import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
 
 const currentProbs = INFINITE_DECK_PROBS.slice();
-
-function addCard(total: number, isSoft: boolean, cardValue: number): [number, boolean] {
-  let softAces = isSoft ? 1 : 0;
-  let t = total + cardValue;
-  if (cardValue === 11) softAces++;
-  while (t > 21 && softAces > 0) {
-    t -= 10;
-    softAces--;
-  }
-  return [t, softAces > 0];
-}
 
 const dealerMemo = new Map<string, Float64Array>();
 

@@ -20,7 +20,7 @@ export function Hand({
   const hasBlackjack = isCardsBlackjack(cards);
 
   return (
-    <div className={`p-4 rounded-lg ${isCurrentHand ? "ring-2 ring-yellow-400 bg-yellow-50" : ""}`}>
+    <div className={`p-4 rounded-lg ${isCurrentHand ? "ring-2 ring-yellow-400 bg-yellow-50" : ""}`} role="region" aria-label={`${label}${hideHoleCard ? "" : hasBlackjack ? ", Blackjack" : `, ${isSoft && total <= 21 ? "Soft " : ""}${total > 21 ? "Bust" : total}`}`}>
       <div className="flex items-center gap-2 mb-2">
         <span className="font-semibold text-zinc-700">{label}</span>
         {hideHoleCard ? (

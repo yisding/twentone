@@ -129,8 +129,10 @@ function ModeSelector({
   onModeChange: (mode: GameMode) => void;
 }) {
   return (
-    <div className="flex border-b border-zinc-200">
+    <div className="flex border-b border-zinc-200" role="tablist" aria-label="Game mode">
       <button
+        role="tab"
+        aria-selected={currentMode === "practice"}
         onClick={() => onModeChange("practice")}
         className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
           currentMode === "practice"
@@ -141,6 +143,8 @@ function ModeSelector({
         Practice Mode
       </button>
       <button
+        role="tab"
+        aria-selected={currentMode === "training"}
         onClick={() => onModeChange("training")}
         className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
           currentMode === "training"

@@ -73,17 +73,16 @@ export function updateScenarioProgress(
     if (interval === 0) {
       interval = INITIAL_INTERVAL;
     } else if (interval === 1) {
-      interval = 6;
+      interval = 3;
+    } else if (interval === 3) {
+      interval = 7;
     } else {
       interval = Math.round(interval * easeFactor);
     }
-    easeFactor = Math.max(
-      MIN_EASE_FACTOR,
-      easeFactor + 0.1,
-    );
+    easeFactor = Math.max(MIN_EASE_FACTOR, easeFactor + 0.05);
   } else {
     interval = 0;
-    easeFactor = Math.max(MIN_EASE_FACTOR, easeFactor - 0.2);
+    easeFactor = Math.max(MIN_EASE_FACTOR, easeFactor - 0.15);
   }
 
   return {
@@ -154,8 +153,9 @@ export function prioritizeScenarios(
     } else {
       const { nextReview, correctCount, incorrectCount, easeFactor } =
         scenarioProgress;
+      const totalAttempts = correctCount + incorrectCount;
       const isDue = now >= nextReview;
-      const accuracy = correctCount / (correctCount + incorrectCount);
+      const accuracy = totalAttempts > 0 ? correctCount / totalAttempts : 0;
 
       if (isDue) {
         priority += 500;
@@ -163,21 +163,23 @@ export function prioritizeScenarios(
       }
 
       priority += (1 - accuracy) * 400;
-      priority += (incorrectCount / (correctCount + incorrectCount + 1)) * 300;
+      if (totalAttempts > 0) {
+        priority += (incorrectCount / totalAttempts) * 300;
+      }
 
       priority += scenario.difficulty * 50;
 
       priority += (DEFAULT_EASE_FACTOR - easeFactor) * 100;
 
-      if (accuracy < 0.5 && correctCount + incorrectCount >= 3) {
+      if (accuracy < 0.5 && totalAttempts >= 3) {
         priority += 200;
         reason = "Needs practice";
-      } else if (accuracy < 0.75 && correctCount + incorrectCount >= 3) {
+      } else if (accuracy < 0.75 && totalAttempts >= 3) {
         priority += 100;
         reason = "Still learning";
       } else if (isDue) {
         reason = "Due for review";
-      } else if (correctCount > 0 && incorrectCount === 0) {
+      } else if (accuracy >= 0.9 && totalAttempts >= 5) {
         priority -= 100;
         reason = "Mastered";
       }
@@ -202,9 +204,12 @@ export function selectNextScenario(
   const prioritized = prioritizeScenarios(scenarios, progress, focusCategory);
   prioritized.sort((a, b) => b.priority - a.priority);
 
-  const topCandidates = prioritized.slice(0, Math.min(5, prioritized.length));
-  const weights = topCandidates.map((p) => Math.max(1, p.priority));
+  const topCandidates = prioritized.slice(0, Math.min(8, prioritized.length));
+  const minPriority = Math.min(...topCandidates.map((p) => p.priority));
+  const offset = minPriority < 1 ? 1 - minPriority : 0;
+  const weights = topCandidates.map((p) => p.priority + offset);
   const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  if (totalWeight <= 0) return topCandidates[0]?.scenario ?? null;
   let random = Math.random() * totalWeight;
 
   for (let i = 0; i < topCandidates.length; i++) {
