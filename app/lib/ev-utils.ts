@@ -20,6 +20,16 @@ function computeDealerDist(dealerUpcard: number, hitSoft17: boolean): Float64Arr
     for (let j = 0; j < 6; j++) dist[j] += currentProbs[i] * sub[j];
   }
 
+  // Condition on no dealer blackjack (peek game)
+  let bjProb = 0;
+  if (dealerUpcard === 11) bjProb = currentProbs[8]; // Ace up, 10-value hole
+  else if (dealerUpcard === 10) bjProb = currentProbs[9]; // 10 up, Ace hole
+  if (bjProb > 0) {
+    dist[4] -= bjProb; // remove BJ from 21 bucket (index 4 = total 21)
+    const scale = 1 / (1 - bjProb);
+    for (let j = 0; j < 6; j++) dist[j] *= scale;
+  }
+
   dealerMemo.set(key, dist);
   return dist;
 }
