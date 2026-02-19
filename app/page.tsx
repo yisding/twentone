@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { HouseRules, DEFAULT_HOUSE_RULES } from "./lib/types";
+import { generateStrategyTable, type StrategyTable } from "./lib/ev-calculator";
 import { SettingsPanel, StatsBar, GameArea, MistakesLog, TrainingMode } from "./components";
 import { useGameState, useSessionStats, useIncorrectPlays, useTrainingMode } from "./hooks";
 
@@ -11,6 +12,8 @@ export default function Home() {
   const [rules, setRules] = useState<HouseRules>(DEFAULT_HOUSE_RULES);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gameMode, setGameMode] = useState<GameMode>("practice");
+
+  const strategyTable = useMemo(() => generateStrategyTable(rules), [rules]);
 
   const { stats, recordAnswer, updateWinnings, reset: resetStats } = useSessionStats();
   const { plays, recordIncorrectPlay, clearPlays, removePlay } = useIncorrectPlays();
@@ -69,6 +72,7 @@ export default function Home() {
                   <GameArea
                     gameState={gameState}
                     rules={rules}
+                    strategyTable={strategyTable}
                     currentHand={currentHand}
                     showCorrectAnswer={showCorrectAnswer}
                     availableActions={availableActions}
@@ -102,6 +106,7 @@ export default function Home() {
                   sessionStats={trainingState.sessionStats}
                   focusCategory={trainingState.focusCategory}
                   rules={rules}
+                  strategyTable={strategyTable}
                   availableActions={getTrainingActions()}
                   onNextScenario={nextScenario}
                   onSubmitAnswer={submitAnswer}

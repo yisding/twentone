@@ -1,6 +1,7 @@
 import { Hand, HouseRules, PlayerAction } from "./types";
 import { calculateHandValue, getCardValue, getDealerUpCard } from "./deck";
 import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
+import type { StrategyTable, StrategyEntry } from "./ev-calculator";
 
 const currentProbs = INFINITE_DECK_PROBS.slice();
 
@@ -215,19 +216,94 @@ export interface EVCostInfo {
   evLossPercent: string;
 }
 
+function lookupStrategyEntry(
+  playerHand: Hand,
+  dealerValue: number,
+  strategyTable: StrategyTable,
+): StrategyEntry | null {
+  const { total, isSoft } = calculateHandValue(playerHand);
+  const isPair = playerHand.cards.length === 2 &&
+    playerHand.cards[0].rank === playerHand.cards[1].rank;
+
+  if (isPair) {
+    const cv = getCardValue(playerHand.cards[0]);
+    return strategyTable.pairs.get(cv)?.get(dealerValue) ?? null;
+  }
+  if (isSoft) {
+    return strategyTable.soft.get(total)?.get(dealerValue) ?? null;
+  }
+  return strategyTable.hard.get(total)?.get(dealerValue) ?? null;
+}
+
 export function computeEVCost(
   playerHand: Hand,
   dealerHand: Hand,
   chosenAction: PlayerAction,
   rules: HouseRules,
+  strategyTable?: StrategyTable | null,
 ): EVCostInfo | null {
+  const dealerUpCard = getDealerUpCard(dealerHand);
+  if (!dealerUpCard) return null;
+  const dealerValue = getCardValue(dealerUpCard);
+
+  // Try to use precomputed strategy table EVs (composition-dependent, more accurate)
+  const entry = strategyTable
+    ? lookupStrategyEntry(playerHand, dealerValue, strategyTable)
+    : null;
+
+  if (entry?.evs) {
+    const isTwoCardHand = playerHand.cards.length === 2;
+    const isPair = isTwoCardHand &&
+      playerHand.cards[0].rank === playerHand.cards[1].rank;
+    const { total } = calculateHandValue(playerHand);
+
+    // Build available action EVs from the strategy table entry
+    const available: ActionEV[] = [
+      { action: "stand" as PlayerAction, ev: entry.evs.stand, isAvailable: true },
+      { action: "hit" as PlayerAction, ev: entry.evs.hit, isAvailable: true },
+    ];
+
+    if (entry.evs.double !== undefined && isTwoCardHand &&
+        canDouble(total, rules) &&
+        (!playerHand.isSplit || rules.doubleAfterSplit)) {
+      available.push({ action: "double" as PlayerAction, ev: entry.evs.double, isAvailable: true });
+    }
+
+    if (entry.evs.split !== undefined && isPair &&
+        rules.maxSplitHands >= 2 && !playerHand.isSplit) {
+      available.push({ action: "split" as PlayerAction, ev: entry.evs.split, isAvailable: true });
+    }
+
+    if (entry.evs.surrender !== undefined &&
+        rules.surrenderAllowed !== "none" && isTwoCardHand && !playerHand.isSplit) {
+      available.push({ action: "surrender" as PlayerAction, ev: entry.evs.surrender, isAvailable: true });
+    }
+
+    const optimal = available.reduce((best, curr) =>
+      curr.ev > best.ev ? curr : best
+    );
+    const chosen = available.find(a => a.action === chosenAction);
+    if (!chosen) return null;
+
+    const evLoss = optimal.ev - chosen.ev;
+    return {
+      optimalAction: optimal.action,
+      optimalEV: optimal.ev,
+      chosenAction: chosen.action,
+      chosenEV: chosen.ev,
+      evLoss,
+      evLossPercent: formatEvLossPercent(evLoss),
+    };
+  }
+
+  // Fallback: infinite deck approximation
   const actionEVs = computeActionEVs(playerHand, dealerHand, rules);
   if (actionEVs.length === 0) return null;
 
   const availableActions = actionEVs.filter(a => a.isAvailable);
   if (availableActions.length === 0) return null;
 
-  const optimal = availableActions.reduce((best, curr) => 
+  const optimal = availableActions.reduce((best, curr) =>
     curr.ev > best.ev ? curr : best
   );
 
@@ -235,26 +311,27 @@ export function computeEVCost(
   if (!chosen || !chosen.isAvailable) return null;
 
   const evLoss = optimal.ev - chosen.ev;
-  const evLossPercent = Math.abs(evLoss) <= 0.001 
-    ? "0%" 
-    : `${evLoss >= 0 ? "-" : "+"}${(Math.abs(evLoss) * 100).toFixed(1)}%`;
-
   return {
     optimalAction: optimal.action,
     optimalEV: optimal.ev,
     chosenAction: chosen.action,
     chosenEV: chosen.ev,
     evLoss,
-    evLossPercent,
+    evLossPercent: formatEvLossPercent(evLoss),
   };
+}
+
+function formatEvLossPercent(evLoss: number): string {
+  if (Math.abs(evLoss) <= 0.00001) return "0%";
+  return `${evLoss >= 0 ? "-" : "+"}${(Math.abs(evLoss) * 100).toFixed(2)}%`;
 }
 
 export function formatEV(ev: number): string {
   const sign = ev >= 0 ? "+" : "";
-  return `${sign}${(ev * 100).toFixed(1)}%`;
+  return `${sign}${(ev * 100).toFixed(2)}%`;
 }
 
 export function formatEVLoss(evLoss: number): string {
-  if (Math.abs(evLoss) < 0.001) return "0%";
-  return `-${(evLoss * 100).toFixed(1)}%`;
+  if (Math.abs(evLoss) < 0.00001) return "0%";
+  return `-${(evLoss * 100).toFixed(2)}%`;
 }

@@ -17,6 +17,7 @@ import {
 import { calculateCardsValue } from "../lib/deck";
 import { computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
 import { actionToString, getActionVariant, getActionColor } from "../lib/format";
+import type { StrategyTable } from "../lib/ev-calculator";
 
 interface TrainingModeProps {
   currentScenario: TrainingScenario | null;
@@ -27,6 +28,7 @@ interface TrainingModeProps {
   sessionStats: { correct: number; total: number };
   focusCategory: TrainingScenarioCategory | null;
   rules: HouseRules;
+  strategyTable?: StrategyTable | null;
   availableActions: PlayerAction[];
   onNextScenario: () => void;
   onSubmitAnswer: (action: PlayerAction) => void;
@@ -48,6 +50,7 @@ export function TrainingMode({
   sessionStats,
   focusCategory,
   rules,
+  strategyTable,
   availableActions,
   onNextScenario,
   onSubmitAnswer,
@@ -190,6 +193,7 @@ export function TrainingMode({
             chosenAction={lastChosenAction}
             currentScenario={currentScenario}
             rules={rules}
+            strategyTable={strategyTable}
           />
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -276,12 +280,14 @@ function FeedbackMessage({
   chosenAction,
   currentScenario,
   rules,
+  strategyTable,
 }: {
   isCorrect: boolean;
   expectedAction: PlayerAction | null;
   chosenAction: PlayerAction | null;
   currentScenario: TrainingScenario;
   rules: HouseRules;
+  strategyTable?: StrategyTable | null;
 }) {
   const message = isCorrect
     ? "Correct!"
@@ -305,7 +311,7 @@ function FeedbackMessage({
   };
 
   const evCost = !isCorrect && chosenAction && expectedAction
-    ? computeEVCost(playerHand, dealerHand, chosenAction, rules)
+    ? computeEVCost(playerHand, dealerHand, chosenAction, rules, strategyTable)
     : null;
 
   return (

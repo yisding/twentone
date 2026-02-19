@@ -769,6 +769,7 @@ export type ActionName = "H" | "S" | "D" | "P" | "Rh" | "Rs" | "Rp";
 export interface StrategyEntry {
   action: ActionName;
   ev: number;
+  evs?: { stand: number; hit: number; double?: number; split?: number; surrender?: number };
 }
 
 export interface StrategyTable {
@@ -861,8 +862,8 @@ export function generateStrategyTable(
         dblAllowed = total >= 9 && total <= 11;
       else if (rules.doubleRestriction === "10-11")
         dblAllowed = total >= 10 && total <= 11;
+      let dblEV = 0;
       if (dblAllowed) {
-        let dblEV = 0;
         for (let i = 0; i < N; i++) {
           const [nt] = addCard(total, false, CARD_VALUES[i]);
           dblEV += currentProbs[i] * (nt > 21 ? -1 : evStand(nt));
@@ -880,8 +881,12 @@ export function generateStrategyTable(
         bestEV = -0.5;
       }
 
+      const evs: StrategyEntry["evs"] = { stand: standEV, hit: hitEV };
+      if (dblAllowed) evs.double = dblEV;
+      if (canSurr) evs.surrender = -0.5;
+
       if (!hard.has(total)) hard.set(total, new Map());
-      hard.get(total)!.set(dealerKey, { action: bestAction, ev: bestEV });
+      hard.get(total)!.set(dealerKey, { action: bestAction, ev: bestEV, evs });
     }
 
     // Soft totals 13-21 (A+2 through A+10)
@@ -904,8 +909,8 @@ export function generateStrategyTable(
         dblAllowed = total >= 9 && total <= 11;
       else if (rules.doubleRestriction === "10-11")
         dblAllowed = total >= 10 && total <= 11;
+      let dblEV = 0;
       if (dblAllowed) {
-        let dblEV = 0;
         for (let i = 0; i < N; i++) {
           const [nt] = addCard(total, true, CARD_VALUES[i]);
           dblEV += currentProbs[i] * (nt > 21 ? -1 : evStand(nt));
@@ -922,8 +927,12 @@ export function generateStrategyTable(
         bestEV = -0.5;
       }
 
+      const softEvs: StrategyEntry["evs"] = { stand: standEV, hit: hitEV };
+      if (dblAllowed) softEvs.double = dblEV;
+      if (canSurr) softEvs.surrender = -0.5;
+
       if (!soft.has(total)) soft.set(total, new Map());
-      soft.get(total)!.set(dealerKey, { action: bestAction, ev: bestEV });
+      soft.get(total)!.set(dealerKey, { action: bestAction, ev: bestEV, evs: softEvs });
     }
 
     // Pairs (card value 2-11)
@@ -941,46 +950,50 @@ export function generateStrategyTable(
       let bestAction: ActionName;
       let bestEV: number;
 
+      // Compute stand/hit/double EVs for the pair as a regular hand
+      const standEV = evStand(total);
+      let hitEV = 0;
+      for (let i = 0; i < N; i++) {
+        const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
+        hitEV += currentProbs[i] * evOptimal(nt, ns, false, false);
+      }
+      let dblAllowed = true;
+      if (rules.doubleRestriction === "9-11")
+        dblAllowed = total >= 9 && total <= 11;
+      else if (rules.doubleRestriction === "10-11")
+        dblAllowed = total >= 10 && total <= 11;
+      let dblEV = 0;
+      if (dblAllowed) {
+        for (let i = 0; i < N; i++) {
+          const [nt] = addCard(total, isSoft, CARD_VALUES[i]);
+          dblEV += currentProbs[i] * (nt > 21 ? -1 : evStand(nt));
+        }
+        dblEV *= 2;
+      }
+
       if (splitEv > noSplitEV) {
         bestAction = "P";
         bestEV = splitEv;
       } else {
-        // Determine the non-split action
-        const standEV = evStand(total);
-        let hitEV = 0;
-        for (let i = 0; i < N; i++) {
-          const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
-          hitEV += currentProbs[i] * evOptimal(nt, ns, false, false);
-        }
         bestAction = standEV >= hitEV ? "S" : "H";
         bestEV = Math.max(standEV, hitEV);
-
-        let dblAllowed = true;
-        if (rules.doubleRestriction === "9-11")
-          dblAllowed = total >= 9 && total <= 11;
-        else if (rules.doubleRestriction === "10-11")
-          dblAllowed = total >= 10 && total <= 11;
-        if (dblAllowed) {
-          let dblEV = 0;
-          for (let i = 0; i < N; i++) {
-            const [nt] = addCard(total, isSoft, CARD_VALUES[i]);
-            dblEV += currentProbs[i] * (nt > 21 ? -1 : evStand(nt));
-          }
-          dblEV *= 2;
-          if (dblEV > bestEV) {
-            bestAction = "D";
-            bestEV = dblEV;
-          }
+        if (dblAllowed && dblEV > bestEV) {
+          bestAction = "D";
+          bestEV = dblEV;
         }
-
         if (canSurr && -0.5 > bestEV) {
           bestAction = standEV >= hitEV ? "Rs" : "Rh";
           bestEV = -0.5;
         }
       }
 
+      const pairEvs: StrategyEntry["evs"] = { stand: standEV, hit: hitEV };
+      if (dblAllowed) pairEvs.double = dblEV;
+      if (rules.maxSplitHands >= 2) pairEvs.split = splitEv;
+      if (canSurr) pairEvs.surrender = -0.5;
+
       if (!pairs.has(cv)) pairs.set(cv, new Map());
-      pairs.get(cv)!.set(dealerKey, { action: bestAction, ev: bestEV });
+      pairs.get(cv)!.set(dealerKey, { action: bestAction, ev: bestEV, evs: pairEvs });
     }
 
     // Restore shoe for finite deck

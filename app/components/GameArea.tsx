@@ -4,6 +4,7 @@ import { isBusted, isCardsBlackjack } from "../lib/deck";
 import { getHandResult } from "../lib/game";
 import { computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
 import { actionToString, getActionVariant, getActionColor } from "../lib/format";
+import type { StrategyTable } from "../lib/ev-calculator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 interface GameAreaProps {
   gameState: GameState;
   rules: HouseRules;
+  strategyTable?: StrategyTable | null;
   currentHand: HandType | undefined;
   showCorrectAnswer: boolean;
   availableActions: PlayerAction[];
@@ -23,6 +25,7 @@ interface GameAreaProps {
 export function GameArea({
   gameState,
   rules,
+  strategyTable,
   currentHand,
   showCorrectAnswer,
   availableActions,
@@ -85,6 +88,7 @@ export function GameArea({
           actedHand={gameState.lastActionHand}
           dealerHand={gameState.dealerHand}
           rules={rules}
+          strategyTable={strategyTable}
         />
       )}
 
@@ -182,6 +186,7 @@ function FeedbackMessage({
   actedHand,
   dealerHand,
   rules,
+  strategyTable,
 }: {
   isCorrect: boolean;
   expectedAction: PlayerAction;
@@ -189,13 +194,14 @@ function FeedbackMessage({
   actedHand: HandType | null;
   dealerHand: HandType;
   rules: HouseRules;
+  strategyTable?: StrategyTable | null;
 }) {
   const message = isCorrect
     ? "Correct!"
     : `Incorrect. The correct play was ${actionToString(expectedAction)}.`;
 
   const evCost = !isCorrect && actedHand
-    ? computeEVCost(actedHand, dealerHand, lastAction, rules)
+    ? computeEVCost(actedHand, dealerHand, lastAction, rules, strategyTable)
     : null;
 
   return (
