@@ -5,4 +5,5 @@ export { SettingsPanel } from "./SettingsPanel";
 export { StatsBar } from "./StatsBar";
 export { MistakesLog } from "./MistakesLog";
 export { SimulationPanel } from "./SimulationPanel";
+export { TrainingMode } from "./TrainingMode";
 export type { SessionStats } from "../lib/types";

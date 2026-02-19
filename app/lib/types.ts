@@ -101,3 +101,48 @@ export const DEFAULT_HOUSE_RULES: HouseRules = {
   noHoleCard: false,
   maxSplitHands: 4,
 };
+
+export type TrainingScenarioCategory =
+  | "splits"
+  | "soft-doubles"
+  | "hard-doubles"
+  | "surrenders"
+  | "ruleset-variations"
+  | "tricky-totals";
+
+export interface TrainingScenario {
+  id: string;
+  category: TrainingScenarioCategory;
+  description: string;
+  playerCards: Card[];
+  dealerUpCard: Card;
+  expectedAction: PlayerAction;
+  rulesVariants?: Partial<HouseRules>[];
+  explanation: string;
+  difficulty: 1 | 2 | 3;
+}
+
+export interface TrainingRecord {
+  scenarioId: string;
+  timestamp: number;
+  wasCorrect: boolean;
+  responseTime: number;
+  userAction: PlayerAction;
+}
+
+export interface ScenarioProgress {
+  scenarioId: string;
+  correctCount: number;
+  incorrectCount: number;
+  lastAttempt: number;
+  interval: number;
+  easeFactor: number;
+  nextReview: number;
+}
+
+export interface TrainingProgress {
+  scenarios: Record<string, ScenarioProgress>;
+  categoryStats: Record<TrainingScenarioCategory, { correct: number; total: number }>;
+  totalSessions: number;
+  lastSession: number;
+}
