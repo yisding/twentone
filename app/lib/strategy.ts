@@ -319,6 +319,9 @@ function getPairExplanation(
   }
 
   if (action === "hit" && pairValue === 7) {
+    if (dealerValue === 8 && rules.decks > 2) {
+      ruleNotes.push("With single or double deck, split 7s vs 8 due to card composition effects.");
+    }
     return "Splitting 7s against a strong dealer creates two weak hands. Better to hit the 14 as a single hand.";
   }
 

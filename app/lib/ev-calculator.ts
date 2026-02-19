@@ -26,12 +26,8 @@ const N = 10; // number of distinct card values
 // Module-level mutable probability source (defaults to infinite deck)
 const currentProbs = INFINITE_DECK_PROBS.slice();
 
-// Dealer distribution array indices
-const D17 = 0,
-  D18 = 1,
-  D19 = 2,
-  D20 = 3,
-  D21 = 4,
+// Dealer distribution array indices: [P(17), P(18), P(19), P(20), P(21), P(bust)]
+const D21 = 4,
   DBUST = 5;
 type DealerDist = Float64Array; // length 6: [P(17), P(18), P(19), P(20), P(21), P(bust)]
 
@@ -516,13 +512,274 @@ export function calculateFiniteDeckEV(
   };
 }
 
+// === Composition-dependent (CD) EV calculation ===
+// Tracks exact shoe state through every draw for exact results.
+// Dealer and player draws each independently deplete the shoe.
+
+const dealerCDMemo = new Map<string, DealerDist>();
+let playerCDMemo = new Map<string, number>();
+
+function shoeKey(s: number[]): string {
+  return `${s[0]}.${s[1]}.${s[2]}.${s[3]}.${s[4]}.${s[5]}.${s[6]}.${s[7]}.${s[8]}.${s[9]}`;
+}
+
+// CD dealer: track exact shoe composition through all dealer draws
+function dealerRecCD(
+  total: number,
+  isSoft: boolean,
+  shoe: number[],
+  st: number,
+): DealerDist {
+  if (total > 21) {
+    const d = new Float64Array(6);
+    d[DBUST] = 1;
+    return d;
+  }
+  const mustStand =
+    total > 17 || (total === 17 && !(isSoft && currentRules.hitSoft17));
+  if (mustStand) {
+    const d = new Float64Array(6);
+    d[total - 17] = 1;
+    return d;
+  }
+  const key = `${total * 2 + (isSoft ? 1 : 0)}|${shoeKey(shoe)}`;
+  const cached = dealerCDMemo.get(key);
+  if (cached) return cached;
+
+  const d = new Float64Array(6);
+  for (let i = 0; i < N; i++) {
+    if (shoe[i] === 0) continue;
+    const p = shoe[i] / st;
+    const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
+    shoe[i]--;
+    const sub = dealerRecCD(nt, ns, shoe, st - 1);
+    shoe[i]++;
+    for (let j = 0; j < 6; j++) d[j] += p * sub[j];
+  }
+  dealerCDMemo.set(key, d);
+  return d;
+}
+
+// CD player: track exact shoe composition through all player draws
+function evOptimalCD(
+  total: number,
+  isSoft: boolean,
+  canDouble: boolean,
+  canSurrender: boolean,
+  shoe: number[],
+  st: number,
+): number {
+  if (total > 21) return -1;
+  const hk =
+    (total << 3) |
+    ((isSoft ? 1 : 0) << 2) |
+    ((canDouble ? 1 : 0) << 1) |
+    (canSurrender ? 1 : 0);
+  const key = `${hk}|${shoeKey(shoe)}`;
+  const cached = playerCDMemo.get(key);
+  if (cached !== undefined) return cached;
+
+  let best = evStand(total);
+
+  // Hit
+  let hitEV = 0;
+  for (let i = 0; i < N; i++) {
+    if (shoe[i] === 0) continue;
+    const p = shoe[i] / st;
+    const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
+    shoe[i]--;
+    hitEV += p * evOptimalCD(nt, ns, false, false, shoe, st - 1);
+    shoe[i]++;
+  }
+  if (hitEV > best) best = hitEV;
+
+  // Double
+  if (canDouble) {
+    const r = currentRules.doubleRestriction;
+    let allowed = true;
+    if (r === "9-11") allowed = total >= 9 && total <= 11;
+    else if (r === "10-11") allowed = total >= 10 && total <= 11;
+    if (allowed) {
+      let dblEV = 0;
+      for (let i = 0; i < N; i++) {
+        if (shoe[i] === 0) continue;
+        const p = shoe[i] / st;
+        const [nt] = addCard(total, isSoft, CARD_VALUES[i]);
+        dblEV += p * (nt > 21 ? -1 : evStand(nt));
+      }
+      dblEV *= 2;
+      if (dblEV > best) best = dblEV;
+    }
+  }
+
+  if (canSurrender && -0.5 > best) best = -0.5;
+  playerCDMemo.set(key, best);
+  return best;
+}
+
+function splitHandEVCD(
+  splitCard: number,
+  resplitsLeft: number,
+  isAces: boolean,
+  shoe: number[],
+  st: number,
+): number {
+  let ev = 0;
+  for (let i = 0; i < N; i++) {
+    if (shoe[i] === 0) continue;
+    const c2 = CARD_VALUES[i];
+    const p = shoe[i] / st;
+    const [total, soft] = addCard(splitCard, splitCard === 11, c2);
+    const canRS =
+      c2 === splitCard &&
+      resplitsLeft > 0 &&
+      (!isAces || currentRules.resplitAces);
+
+    shoe[i]--;
+    if (isAces && !canRS) {
+      ev += p * evStand(total);
+    } else if (canRS) {
+      const playEV = evOptimalCD(
+        total, soft, !isAces && currentRules.doubleAfterSplit, false,
+        shoe, st - 1,
+      );
+      const rsEV = 2 * splitHandEVCD(splitCard, resplitsLeft - 1, isAces, shoe, st - 1);
+      ev += p * Math.max(playEV, rsEV);
+    } else {
+      ev += p * evOptimalCD(
+        total, soft, !isAces && currentRules.doubleAfterSplit, false,
+        shoe, st - 1,
+      );
+    }
+    shoe[i]++;
+  }
+  return ev;
+}
+
+function evSplitCD(cv: number, shoe: number[], st: number): number {
+  return 2 * splitHandEVCD(cv, currentRules.maxSplitHands - 2, cv === 11, shoe, st);
+}
+
+// Full composition-dependent EV: exact shoe tracking through all draws
+export function calculateCDEV(
+  rules: HouseRules = DEFAULT_HOUSE_RULES,
+): EVResult {
+  currentRules = rules;
+  const shoe = makeShoe(rules.decks);
+  const tc = rules.decks * 52;
+  const bjPay =
+    rules.blackjackPays === "3:2"
+      ? 1.5
+      : rules.blackjackPays === "6:5"
+        ? 1.2
+        : 1.0;
+  const surrLate = rules.surrenderAllowed === "late";
+  const surrEarly = rules.surrenderAllowed === "early";
+
+  dealerCDMemo.clear();
+  let totalEV = 0;
+  let totalW = 0;
+
+  for (let ui = 0; ui < N; ui++) {
+    if (shoe[ui] === 0) continue;
+    const uc = CARD_VALUES[ui];
+    const pU = shoe[ui] / tc;
+    shoe[ui]--;
+    const t1 = tc - 1;
+
+    for (let c1i = 0; c1i < N; c1i++) {
+      if (shoe[c1i] === 0) continue;
+      const c1 = CARD_VALUES[c1i];
+      const pC1 = shoe[c1i] / t1;
+      shoe[c1i]--;
+      const t2 = t1 - 1;
+
+      for (let c2i = 0; c2i < N; c2i++) {
+        if (shoe[c2i] === 0) continue;
+        const c2 = CARD_VALUES[c2i];
+        const pC2 = shoe[c2i] / t2;
+        shoe[c2i]--;
+        const t3 = t2 - 1;
+        const dp = pU * pC1 * pC2;
+
+        // Build aggregate CD dealer distribution
+        const agg = new Float64Array(6);
+        for (let hi = 0; hi < N; hi++) {
+          if (shoe[hi] === 0) continue;
+          const pH = shoe[hi] / t3;
+          const hc = CARD_VALUES[hi];
+          const [dt, ds] = addCard(uc, uc === 11, hc);
+          shoe[hi]--;
+          const sub = dealerRecCD(dt, ds, shoe, t3 - 1);
+          shoe[hi]++;
+          for (let j = 0; j < 6; j++) agg[j] += pH * sub[j];
+        }
+
+        // Condition on no-BJ
+        let bjP = 0;
+        if (uc === 11 && shoe[8] > 0) bjP = shoe[8] / t3;
+        else if (uc === 10 && shoe[9] > 0) bjP = shoe[9] / t3;
+
+        let dd: DealerDist;
+        if (bjP > 0) {
+          dd = new Float64Array(6);
+          for (let j = 0; j < 6; j++) dd[j] = agg[j];
+          dd[D21] -= bjP;
+          if (!rules.noHoleCard) {
+            const scale = 1 / (1 - bjP);
+            for (let j = 0; j < 6; j++) dd[j] *= scale;
+          }
+        } else {
+          dd = agg;
+        }
+
+        currentDD = dd;
+        playerCDMemo = new Map();
+
+        const [pt, ps] = addCard(c1, c1 === 11, c2);
+        const pbj = pt === 21;
+        const pair = c1 === c2;
+        let hev: number;
+
+        if (pbj) {
+          hev = (1 - bjP) * bjPay;
+        } else {
+          let pev = evOptimalCD(pt, ps, true, surrLate, shoe, t3);
+          if (pair && rules.maxSplitHands >= 2) {
+            const sev = evSplitCD(c1, shoe, t3);
+            if (sev > pev) pev = sev;
+          }
+          if (surrEarly) {
+            hev = Math.max(-0.5, bjP * -1 + (1 - bjP) * pev);
+          } else {
+            hev = bjP * -1 + (1 - bjP) * pev;
+          }
+        }
+
+        totalEV += dp * hev;
+        totalW += dp;
+        shoe[c2i]++;
+      }
+      shoe[c1i]++;
+    }
+    shoe[ui]++;
+  }
+
+  totalEV /= totalW;
+  return {
+    playerEV: totalEV,
+    houseEdge: -totalEV,
+    houseEdgePercent: -totalEV * 100,
+  };
+}
+
 // Main entry point: dispatches to finite or infinite deck
 export function calculateEV(
   rules: HouseRules = DEFAULT_HOUSE_RULES,
 ): EVResult {
   const decks = rules.decks;
   if (Number.isInteger(decks) && decks >= 1 && decks <= 8) {
-    return calculateFiniteDeckEV(rules);
+    return calculateCDEV(rules);
   }
   return calculateInfiniteDeckEV(rules);
 }

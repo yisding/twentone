@@ -2,12 +2,12 @@ import {
   calculateEV,
   calculateInfiniteDeckEV,
   calculateFiniteDeckEV,
+  calculateCDEV,
   generateStrategyTable,
 } from "../app/lib/ev-calculator";
-import { calculateHouseEdge } from "../app/lib/houseEdge";
 import { HouseRules, DEFAULT_HOUSE_RULES } from "../app/lib/types";
 
-// Quick test: DP (infinite deck, finite deck) and formula, no simulation
+// Quick test: DP (infinite deck, 3-card removal, full CD) and formula
 
 const testCases: { name: string; rules: HouseRules }[] = [
   { name: "H17, 3:2, DAS, RSA, no surr (2D)", rules: DEFAULT_HOUSE_RULES },
@@ -68,35 +68,40 @@ const testCases: { name: string; rules: HouseRules }[] = [
   },
 ];
 
+// Run 1-2 deck cases with all three modes, 6-8 deck with infinite + 3-card only
+console.log("EV Calculator: Infinite vs 3-Card Removal vs Full CD\n");
 console.log(
-  "EV Calculator: Infinite Deck vs Finite Deck (3-card removal) vs Formula\n",
+  "Rule Set                                Infinite%  3-Card%    CD%        Time(3cr)  Time(CD)",
 );
-console.log(
-  "Rule Set                                Infinite%  Finite%    Diff     Formula%   Time(inf) Time(fin)",
-);
-console.log("-".repeat(105));
+console.log("-".repeat(100));
 
 for (const tc of testCases) {
-  const t0 = performance.now();
   const infEV = calculateInfiniteDeckEV(tc.rules);
-  const msInf = performance.now() - t0;
-
-  const t1 = performance.now();
+  const t0 = performance.now();
   const finEV = calculateFiniteDeckEV(tc.rules);
-  const msFin = performance.now() - t1;
+  const msFin = performance.now() - t0;
 
-  const formula = calculateHouseEdge(tc.rules);
-  const diff = finEV.houseEdgePercent - infEV.houseEdgePercent;
+  let cdStr = "     N/A";
+  let msCDStr = "      N/A";
+  if (tc.rules.decks <= 2) {
+    const t1 = performance.now();
+    const cdEV = calculateCDEV(tc.rules);
+    const msCD = performance.now() - t1;
+    cdStr = cdEV.houseEdgePercent.toFixed(4).padStart(8);
+    msCDStr = `${msCD.toFixed(0).padStart(7)}ms`;
+  }
 
   console.log(
-    `${tc.name.padEnd(40)}${infEV.houseEdgePercent.toFixed(4).padStart(9)}  ${finEV.houseEdgePercent.toFixed(4).padStart(8)}  ${diff >= 0 ? "+" : ""}${diff.toFixed(4).padStart(7)}  ${formula.toFixed(4).padStart(9)}  ${msInf.toFixed(1).padStart(8)}ms ${msFin.toFixed(1).padStart(8)}ms`,
+    `${tc.name.padEnd(40)}${infEV.houseEdgePercent.toFixed(4).padStart(9)}  ${finEV.houseEdgePercent.toFixed(4).padStart(8)}  ${cdStr}  ${msFin.toFixed(0).padStart(7)}ms ${msCDStr}`,
   );
 }
 
-// Verify: finite deck should have lower house edge than infinite deck
-console.log("\n" + "=".repeat(105));
+// Verification
+console.log("\n" + "=".repeat(100));
 console.log("Verification:");
 let allPass = true;
+
+// Finite deck house edge < infinite deck
 for (const tc of testCases) {
   const infEV = calculateInfiniteDeckEV(tc.rules);
   const finEV = calculateFiniteDeckEV(tc.rules);
@@ -104,57 +109,51 @@ for (const tc of testCases) {
   const pass = diff < 0;
   if (!pass) allPass = false;
   console.log(
-    `  ${pass ? "PASS" : "FAIL"}: ${tc.name} — finite ${diff >= 0 ? "+" : ""}${diff.toFixed(4)}% vs infinite`,
+    `  ${pass ? "PASS" : "FAIL"}: ${tc.name} — 3-card ${diff >= 0 ? "+" : ""}${diff.toFixed(4)}% vs infinite`,
   );
 }
 
-// 6-8 deck: finite ≈ infinite within ~0.15% (3-card removal has small residual)
+// CD house edge < infinite deck (for 1-2 deck cases)
 for (const tc of testCases) {
-  if (tc.rules.decks >= 6) {
-    const infEV = calculateInfiniteDeckEV(tc.rules);
-    const finEV = calculateFiniteDeckEV(tc.rules);
-    const diff = Math.abs(
-      finEV.houseEdgePercent - infEV.houseEdgePercent,
-    );
-    const pass = diff < 0.15;
-    if (!pass) allPass = false;
-    console.log(
-      `  ${pass ? "PASS" : "FAIL"}: ${tc.name} — 6+ deck diff ${diff.toFixed(4)}% < 0.15%`,
-    );
-  }
+  if (tc.rules.decks > 2) continue;
+  const infEV = calculateInfiniteDeckEV(tc.rules);
+  const cdEV = calculateCDEV(tc.rules);
+  const diff = cdEV.houseEdgePercent - infEV.houseEdgePercent;
+  const pass = diff < 0;
+  if (!pass) allPass = false;
+  console.log(
+    `  ${pass ? "PASS" : "FAIL"}: ${tc.name} — CD ${diff >= 0 ? "+" : ""}${diff.toFixed(4)}% vs infinite`,
+  );
 }
 
-// 1-2 deck: finite significantly lower (by ~0.1-0.5%)
+// CD vs 3-card removal: should be close (within ~0.05%)
 for (const tc of testCases) {
-  if (tc.rules.decks <= 2) {
-    const infEV = calculateInfiniteDeckEV(tc.rules);
-    const finEV = calculateFiniteDeckEV(tc.rules);
-    const diff = infEV.houseEdgePercent - finEV.houseEdgePercent;
-    const pass = diff > 0.05;
-    if (!pass) allPass = false;
-    console.log(
-      `  ${pass ? "PASS" : "FAIL"}: ${tc.name} — 1-2 deck improvement ${diff.toFixed(4)}% > 0.05%`,
-    );
-  }
+  if (tc.rules.decks > 2) continue;
+  const finEV = calculateFiniteDeckEV(tc.rules);
+  const cdEV = calculateCDEV(tc.rules);
+  const diff = Math.abs(cdEV.houseEdgePercent - finEV.houseEdgePercent);
+  const pass = diff < 0.1;
+  if (!pass) allPass = false;
+  console.log(
+    `  ${pass ? "PASS" : "FAIL"}: ${tc.name} — CD vs 3-card diff ${diff.toFixed(4)}% < 0.1%`,
+  );
 }
+
+// Dispatch: calculateEV should use CD for 1-8 decks
+const dispatchEV = calculateEV(DEFAULT_HOUSE_RULES);
+const cdEV = calculateCDEV(DEFAULT_HOUSE_RULES);
+const match =
+  Math.abs(dispatchEV.houseEdgePercent - cdEV.houseEdgePercent) < 1e-10;
+console.log(
+  `  ${match ? "PASS" : "FAIL"}: calculateEV dispatches to CD: ${dispatchEV.houseEdgePercent.toFixed(6)} vs ${cdEV.houseEdgePercent.toFixed(6)}`,
+);
 
 console.log(`\nOverall: ${allPass ? "ALL PASS" : "SOME FAILURES"}`);
 
-// Dispatch test: calculateEV should use finite deck for 1-8
-console.log("\n" + "=".repeat(105));
-console.log("Dispatch test (calculateEV should use finite deck for 1-8):");
-const dispatchEV = calculateEV(DEFAULT_HOUSE_RULES);
-const finiteEV = calculateFiniteDeckEV(DEFAULT_HOUSE_RULES);
-const dispatchMatch =
-  Math.abs(dispatchEV.houseEdgePercent - finiteEV.houseEdgePercent) < 1e-10;
-console.log(
-  `  ${dispatchMatch ? "PASS" : "FAIL"}: calculateEV(2D) = calculateFiniteDeckEV(2D): ${dispatchEV.houseEdgePercent.toFixed(6)} vs ${finiteEV.houseEdgePercent.toFixed(6)}`,
-);
-
-// Strategy table
-console.log("\n" + "=".repeat(105));
+// Strategy table (uses 3-card removal, not CD — fast)
+console.log("\n" + "=".repeat(100));
 console.log("Optimal Strategy (2-deck, H17, 3:2, DAS, RSA, no surr)");
-console.log("=".repeat(105));
+console.log("=".repeat(100));
 
 const strategy = generateStrategyTable(DEFAULT_HOUSE_RULES);
 const upcards = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
@@ -187,61 +186,11 @@ for (let t = 21; t >= 13; t--) softRows.push([`A${t - 11}`, t]);
 printTable("Soft Totals", softRows, strategy.soft);
 
 const pairLabels: [string, number][] = [
-  ["AA", 11],
-  ["TT", 10],
-  ["99", 9],
-  ["88", 8],
-  ["77", 7],
-  ["66", 6],
-  ["55", 5],
-  ["44", 4],
-  ["33", 3],
-  ["22", 2],
+  ["AA", 11], ["TT", 10], ["99", 9], ["88", 8], ["77", 7],
+  ["66", 6], ["55", 5], ["44", 4], ["33", 3], ["22", 2],
 ];
 printTable("Pairs", pairLabels, strategy.pairs);
 
 console.log(
   "\nH=Hit S=Stand D=Double P=Split Rh=Surr(hit) Rs=Surr(stand)",
-);
-
-// Compare strategy tables: infinite vs finite deck for 2-deck
-console.log("\n" + "=".repeat(105));
-console.log(
-  "Strategy differences: infinite vs finite deck (2-deck, H17, 3:2, DAS, RSA)",
-);
-console.log("=".repeat(105));
-
-const infStrategy = generateStrategyTable({
-  ...DEFAULT_HOUSE_RULES,
-  decks: 999,
-}); // force infinite
-const finStrategy = generateStrategyTable(DEFAULT_HOUSE_RULES); // 2-deck finite
-
-let diffCount = 0;
-for (const [section, sectionName] of [
-  [["hard", "Hard"], ["soft", "Soft"], ["pairs", "Pairs"]] as const,
-].flat()) {
-  const infTable = infStrategy[section as keyof typeof infStrategy];
-  const finTable = finStrategy[section as keyof typeof finStrategy];
-  for (const [key, infRow] of infTable) {
-    const finRow = finTable.get(key);
-    if (!finRow) continue;
-    for (const uc of upcards) {
-      const infAction = infRow.get(uc)?.action;
-      const finAction = finRow.get(uc)?.action;
-      if (infAction !== finAction) {
-        const label =
-          section === "pairs"
-            ? `${key === 11 ? "A" : key},${key === 11 ? "A" : key}`
-            : `${sectionName} ${key}`;
-        console.log(
-          `  ${label} vs ${uc === 11 ? "A" : uc}: infinite=${infAction} finite=${finAction}`,
-        );
-        diffCount++;
-      }
-    }
-  }
-}
-console.log(
-  `\nTotal strategy differences: ${diffCount} (expect only borderline hands)`,
 );

@@ -168,7 +168,6 @@ function getStrategyAction(
   hand: SimHand,
   dealerUpValue: number, // 2-11 (ace=11)
   rc: RuleConstants,
-  numHands: number, // number of player hands (for split limit)
 ): Action {
   const canSurrenderHand = rc.canSurrender && hand.cardCount === 2 && !hand.isSplit;
 
@@ -490,7 +489,7 @@ export function simulateHouseEdge(
 
       while (!hand.isStanding && !hand.isSurrendered && !hand.isBusted) {
         const dealerUpValue = RANK_VALUE[dealerHand.cards[0]];
-        const action = getStrategyAction(hand, dealerUpValue, rc, numPlayerHands);
+        const action = getStrategyAction(hand, dealerUpValue, rc);
         const validated = validateAction(action, hand, numPlayerHands, rc);
 
         if (validated !== action) {
