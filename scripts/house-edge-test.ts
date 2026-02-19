@@ -7,11 +7,16 @@ interface TestCase {
   expected: number;
 }
 
+const BASE_TEST_RULES: HouseRules = {
+  ...DEFAULT_HOUSE_RULES,
+  resplitAces: false,
+};
+
 const testCases: TestCase[] = [
   {
     name: "8-deck S17 standard (baseline)",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 8,
       hitSoft17: false,
       doubleAfterSplit: true,
@@ -27,7 +32,7 @@ const testCases: TestCase[] = [
   {
     name: "6-deck S17 standard",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 6,
       hitSoft17: false,
       doubleAfterSplit: true,
@@ -41,7 +46,7 @@ const testCases: TestCase[] = [
   {
     name: "6-deck H17 standard",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 6,
       hitSoft17: true,
       doubleAfterSplit: true,
@@ -55,7 +60,7 @@ const testCases: TestCase[] = [
   {
     name: "6-deck S17, BJ pays 6:5",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 6,
       hitSoft17: false,
       doubleAfterSplit: true,
@@ -69,7 +74,7 @@ const testCases: TestCase[] = [
   {
     name: "1-deck S17 (player advantage)",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 1,
       hitSoft17: false,
       doubleAfterSplit: true,
@@ -83,7 +88,7 @@ const testCases: TestCase[] = [
   {
     name: "2-deck S17",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 2,
       hitSoft17: false,
       doubleAfterSplit: true,
@@ -97,7 +102,7 @@ const testCases: TestCase[] = [
   {
     name: "6-deck S17, double 10-11 only",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 6,
       hitSoft17: false,
       doubleAfterSplit: true,
@@ -111,7 +116,7 @@ const testCases: TestCase[] = [
   {
     name: "6-deck S17, no DAS",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 6,
       hitSoft17: false,
       doubleAfterSplit: false,
@@ -125,7 +130,7 @@ const testCases: TestCase[] = [
   {
     name: "6-deck S17, early surrender",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 6,
       hitSoft17: false,
       doubleAfterSplit: true,
@@ -139,7 +144,7 @@ const testCases: TestCase[] = [
   {
     name: "6-deck S17, European no hole card",
     rules: {
-      ...DEFAULT_HOUSE_RULES,
+      ...BASE_TEST_RULES,
       decks: 6,
       hitSoft17: false,
       doubleAfterSplit: true,

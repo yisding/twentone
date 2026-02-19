@@ -14,6 +14,31 @@ import {
 import { getBasicStrategyAction } from "../lib/strategy";
 import { isBusted, isBlackjack, getDealerUpCard } from "../lib/deck";
 
+function processForcedActions(state: GameState, rules: HouseRules): GameState {
+  let currentState = state;
+  
+  while (currentState.phase === "playing") {
+    const actions = getAvailableActions(currentState, rules);
+    if (actions.length !== 1) break;
+    
+    const forcedAction = actions[0];
+    currentState = applyAction(currentState, forcedAction, rules, false);
+    
+    if (currentState.phase === "playing" && 
+        (isBusted(currentState.playerHands[currentState.currentHandIndex]) || 
+         currentState.playerHands[currentState.currentHandIndex].isStanding)) {
+      const allResolved = currentState.playerHands.every(
+        (h) => h.isStanding || isBusted(h) || h.isSurrendered
+      );
+      if (allResolved) {
+        currentState = { ...currentState, phase: "dealer" };
+      }
+    }
+  }
+  
+  return currentState;
+}
+
 export function useGameState(
   rules: HouseRules,
   onCorrectAnswer: () => void,
@@ -39,13 +64,16 @@ export function useGameState(
   }, [gameState, rules, onWinnings]);
 
   const startNewGame = useCallback(() => {
-    const newGame = initGame(rules);
+    let newGame = initGame(rules);
     const playerHasBlackjack = isBlackjack(newGame.playerHands[0]);
     const dealerHasBlackjack = !rules.noHoleCard && isBlackjack(newGame.dealerHand);
     if (playerHasBlackjack || dealerHasBlackjack) {
       newGame.phase = "resolved";
     }
     winningsProcessedRef.current = false;
+    
+    newGame = processForcedActions(newGame, rules);
+    
     setGameState(newGame);
     setShowCorrectAnswer(false);
   }, [rules]);
@@ -65,10 +93,14 @@ export function useGameState(
         }
       }
 
-      let newState = applyAction(gameState, action, rules);
+      let newState = applyAction(gameState, action, rules, true);
 
-      if (newState.phase === "playing" && (isBusted(newState.playerHands[newState.currentHandIndex]) || newState.playerHands[newState.currentHandIndex].isStanding)) {
-        const allResolved = newState.playerHands.every((h) => h.isStanding || isBusted(h) || h.isSurrendered);
+      if (newState.phase === "playing" && 
+          (isBusted(newState.playerHands[newState.currentHandIndex]) || 
+           newState.playerHands[newState.currentHandIndex].isStanding)) {
+        const allResolved = newState.playerHands.every(
+          (h) => h.isStanding || isBusted(h) || h.isSurrendered
+        );
         if (allResolved) {
           newState = { ...newState, phase: "dealer" };
         }
@@ -77,6 +109,8 @@ export function useGameState(
       newState.score = isCorrect
         ? { correct: gameState.score.correct + 1, total: gameState.score.total + 1 }
         : { correct: gameState.score.correct, total: gameState.score.total + 1 };
+
+      newState = processForcedActions(newState, rules);
 
       if (isCorrect) {
         onCorrectAnswer();
@@ -97,8 +131,10 @@ export function useGameState(
 
   const nextHand = useCallback(() => {
     if (!gameState) return;
-    setGameState({ ...gameState, currentHandIndex: gameState.currentHandIndex + 1 });
-  }, [gameState]);
+    let newState = { ...gameState, currentHandIndex: gameState.currentHandIndex + 1 };
+    newState = processForcedActions(newState, rules);
+    setGameState(newState);
+  }, [gameState, rules]);
 
   const availableActions = gameState?.phase === "playing"
     ? getAvailableActions(gameState, rules)
@@ -115,12 +151,24 @@ export function useGameState(
   };
 }
 
-function applyAction(state: GameState, action: PlayerAction, rules: HouseRules): GameState {
+function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, checkStrategy: boolean): GameState {
   const currentHand = state.playerHands[state.currentHandIndex];
-  const expectedAction = getBasicStrategyAction(currentHand, state.dealerHand, rules);
-  const isCorrect = action === expectedAction;
-
-  let newState: GameState = { ...state, lastAction: action, expectedAction, isCorrect };
+  
+  let newState: GameState;
+  
+  if (checkStrategy) {
+    const expectedAction = getBasicStrategyAction(currentHand, state.dealerHand, rules);
+    const isCorrect = action === expectedAction;
+    newState = {
+      ...state,
+      lastAction: action,
+      lastActionHand: { ...currentHand, cards: [...currentHand.cards] },
+      expectedAction,
+      isCorrect,
+    };
+  } else {
+    newState = state;
+  }
 
   switch (action) {
     case "hit": newState = playerHit(newState); break;

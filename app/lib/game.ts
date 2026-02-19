@@ -58,6 +58,7 @@ export function initGame(rules: HouseRules = DEFAULT_HOUSE_RULES): GameState {
     deck: remainingDeck,
     phase: "playing",
     lastAction: null,
+    lastActionHand: null,
     expectedAction: null,
     isCorrect: null,
     score: { correct: 0, total: 0 },
@@ -78,7 +79,6 @@ export function getAvailableActions(
   const { total } = calculateHandValue(hand);
 
   if (hand.isSplitAces && hand.cards.length === 2) {
-    actions.push("stand");
     const canResplitAces = 
       hand.cards[0].rank === "A" && 
       hand.cards[1].rank === "A" &&
@@ -87,6 +87,7 @@ export function getAvailableActions(
     if (canResplitAces) {
       actions.push("split");
     }
+    actions.push("stand");
     return actions;
   }
 

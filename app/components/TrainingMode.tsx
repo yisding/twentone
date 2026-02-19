@@ -8,18 +8,21 @@ import {
   TrainingScenarioCategory,
   PlayerAction,
   HouseRules,
+  Hand,
 } from "../lib/types";
 import {
   CATEGORY_LABELS,
   CATEGORY_DESCRIPTIONS,
 } from "../lib/training-scenarios";
 import { calculateCardsValue } from "../lib/deck";
+import { computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
 
 interface TrainingModeProps {
   currentScenario: TrainingScenario | null;
   showAnswer: boolean;
   lastAnswerCorrect: boolean | null;
   lastExpectedAction: PlayerAction | null;
+  lastChosenAction: PlayerAction | null;
   sessionStats: { correct: number; total: number };
   focusCategory: TrainingScenarioCategory | null;
   rules: HouseRules;
@@ -40,6 +43,7 @@ export function TrainingMode({
   showAnswer,
   lastAnswerCorrect,
   lastExpectedAction,
+  lastChosenAction,
   sessionStats,
   focusCategory,
   rules,
@@ -182,6 +186,9 @@ export function TrainingMode({
           <FeedbackMessage
             isCorrect={lastAnswerCorrect ?? false}
             expectedAction={lastExpectedAction}
+            chosenAction={lastChosenAction}
+            currentScenario={currentScenario}
+            rules={rules}
           />
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -294,22 +301,69 @@ function actionToString(action: PlayerAction): string {
 function FeedbackMessage({
   isCorrect,
   expectedAction,
+  chosenAction,
+  currentScenario,
+  rules,
 }: {
   isCorrect: boolean;
   expectedAction: PlayerAction | null;
+  chosenAction: PlayerAction | null;
+  currentScenario: TrainingScenario;
+  rules: HouseRules;
 }) {
   const message = isCorrect
     ? "Correct!"
     : `Incorrect. The correct play was ${expectedAction ? actionToString(expectedAction) : "?"}.`;
 
+  const playerHand: Hand = {
+    cards: currentScenario.playerCards,
+    isDoubledDown: false,
+    isSplit: false,
+    isSplitAces: false,
+    isSurrendered: false,
+    isStanding: false,
+  };
+  const dealerHand: Hand = {
+    cards: [currentScenario.dealerUpCard],
+    isDoubledDown: false,
+    isSplit: false,
+    isSplitAces: false,
+    isSurrendered: false,
+    isStanding: false,
+  };
+
+  const evCost = !isCorrect && chosenAction && expectedAction
+    ? computeEVCost(playerHand, dealerHand, chosenAction, rules)
+    : null;
+
   return (
-    <div className="text-center">
-      <Badge
-        variant={isCorrect ? "default" : "destructive"}
-        className={cn("text-base px-4 py-2", isCorrect && "bg-green-600")}
-      >
-        {isCorrect ? "✓" : "✗"} {message}
-      </Badge>
+    <div className="space-y-2">
+      <div className="text-center">
+        <Badge
+          variant={isCorrect ? "default" : "destructive"}
+          className={cn("text-base px-4 py-2", isCorrect && "bg-green-600")}
+        >
+          {isCorrect ? "✓" : "✗"} {message}
+        </Badge>
+      </div>
+      {evCost && !isCorrect && expectedAction && chosenAction && (
+        <div className="text-center">
+          <div className="inline-block bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-red-700 font-medium">
+                {actionToString(expectedAction)}: {formatEV(evCost.optimalEV)}
+              </span>
+              <span className="text-zinc-400">|</span>
+              <span className="text-zinc-600">
+                {actionToString(chosenAction)}: {formatEV(evCost.chosenEV)}
+              </span>
+            </div>
+            <div className="mt-1 text-xs text-red-600 font-medium">
+              Cost: {formatEVLoss(evCost.evLoss)} of your bet
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

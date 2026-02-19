@@ -98,6 +98,7 @@ export default function Home() {
                   showAnswer={trainingState.showAnswer}
                   lastAnswerCorrect={trainingState.lastAnswerCorrect}
                   lastExpectedAction={trainingState.lastExpectedAction}
+                  lastChosenAction={trainingState.lastChosenAction}
                   sessionStats={trainingState.sessionStats}
                   focusCategory={trainingState.focusCategory}
                   rules={rules}

@@ -2,6 +2,7 @@ import { Hand } from "./Hand";
 import { GameState, HouseRules, PlayerAction, Hand as HandType } from "../lib/types";
 import { isBusted, isCardsBlackjack } from "../lib/deck";
 import { getHandResult } from "../lib/game";
+import { computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,10 @@ export function GameArea({
         <FeedbackMessage
           isCorrect={gameState.isCorrect ?? false}
           expectedAction={gameState.expectedAction}
+          lastAction={gameState.lastAction}
+          actedHand={gameState.lastActionHand}
+          dealerHand={gameState.dealerHand}
+          rules={rules}
         />
       )}
 
@@ -198,25 +203,57 @@ function actionToString(action: PlayerAction): string {
 function FeedbackMessage({
   isCorrect,
   expectedAction,
+  lastAction,
+  actedHand,
+  dealerHand,
+  rules,
 }: {
   isCorrect: boolean;
   expectedAction: PlayerAction;
+  lastAction: PlayerAction;
+  actedHand: HandType | null;
+  dealerHand: HandType;
+  rules: HouseRules;
 }) {
   const message = isCorrect
     ? "Correct!"
     : `Incorrect. The correct play was ${actionToString(expectedAction)}.`;
 
+  const evCost = !isCorrect && actedHand
+    ? computeEVCost(actedHand, dealerHand, lastAction, rules)
+    : null;
+
   return (
-    <div className="mb-4">
-      <Badge
-        variant={isCorrect ? "default" : "destructive"}
-        className={cn(
-          "text-base px-4 py-2",
-          isCorrect && "bg-green-600"
-        )}
-      >
-        {isCorrect ? "✓" : "✗"} {message}
-      </Badge>
+    <div className="mb-4 space-y-2">
+      <div className="text-center">
+        <Badge
+          variant={isCorrect ? "default" : "destructive"}
+          className={cn(
+            "text-base px-4 py-2",
+            isCorrect && "bg-green-600"
+          )}
+        >
+          {isCorrect ? "✓" : "✗"} {message}
+        </Badge>
+      </div>
+      {evCost && !isCorrect && (
+        <div className="text-center">
+          <div className="inline-block bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-red-700 font-medium">
+                {actionToString(expectedAction)}: {formatEV(evCost.optimalEV)}
+              </span>
+              <span className="text-zinc-400">|</span>
+              <span className="text-zinc-600">
+                {actionToString(lastAction)}: {formatEV(evCost.chosenEV)}
+              </span>
+            </div>
+            <div className="mt-1 text-xs text-red-600 font-medium">
+              Cost: {formatEVLoss(evCost.evLoss)} of your bet
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

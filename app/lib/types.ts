@@ -51,6 +51,7 @@ export interface GameState {
   deck: Card[];
   phase: "betting" | "playing" | "dealer" | "resolved";
   lastAction: PlayerAction | null;
+  lastActionHand: Hand | null;
   expectedAction: PlayerAction | null;
   isCorrect: boolean | null;
   score: { correct: number; total: number };

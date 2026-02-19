@@ -22,6 +22,7 @@ interface TestCase {
 
 const S17_RULES: HouseRules = {
   ...DEFAULT_HOUSE_RULES,
+  decks: 6,
   hitSoft17: false,
   surrenderAllowed: "late",
   doubleAfterSplit: true,

@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test:strategy": "tsx scripts/strategy-test.ts",
     "test:house-edge": "tsx scripts/house-edge-test.ts",
+    "test:ev-mistakes": "tsx scripts/ev-cost-of-mistakes.ts",
     "simulate": "tsx scripts/simulate-house-edge.ts"
   },
   "dependencies": {

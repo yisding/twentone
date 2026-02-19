@@ -49,6 +49,7 @@ export interface TrainingModeState {
   showAnswer: boolean;
   lastAnswerCorrect: boolean | null;
   lastExpectedAction: PlayerAction | null;
+  lastChosenAction: PlayerAction | null;
   sessionStats: { correct: number; total: number };
   focusCategory: TrainingScenarioCategory | null;
 }
@@ -60,6 +61,7 @@ export function useTrainingMode(rules: HouseRules) {
     showAnswer: false,
     lastAnswerCorrect: null,
     lastExpectedAction: null,
+    lastChosenAction: null,
     sessionStats: { correct: 0, total: 0 },
     focusCategory: null,
   }));
@@ -87,6 +89,7 @@ export function useTrainingMode(rules: HouseRules) {
       showAnswer: false,
       lastAnswerCorrect: null,
       lastExpectedAction: expectedAction,
+      lastChosenAction: null,
     }));
   }, [availableScenarios, state.progress, state.focusCategory, rules]);
 
@@ -120,6 +123,7 @@ export function useTrainingMode(rules: HouseRules) {
         showAnswer: true,
         lastAnswerCorrect: isCorrect,
         lastExpectedAction: expectedAction,
+        lastChosenAction: action,
         sessionStats: {
           correct: prev.sessionStats.correct + (isCorrect ? 1 : 0),
           total: prev.sessionStats.total + 1,
