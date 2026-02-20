@@ -181,13 +181,9 @@ export const TRAINING_SCENARIOS: TrainingScenario[] = [
     description: "Soft 17 vs Dealer 2",
     playerCards: [createCard("A", H), createCard("6", D)],
     dealerUpCard: createCard("2", S),
-    expectedAction: "double",
-    explanation: "With H17 rules, double soft 17 vs 2. With S17, just hit.",
+    expectedAction: "hit",
+    explanation: "Soft 17 vs 2 isn't strong enough to double. Just hit.",
     difficulty: 2,
-    rulesVariants: [
-      { hitSoft17: true },
-      { hitSoft17: false },
-    ],
   },
   {
     id: "soft-17-vs-5",
