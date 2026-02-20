@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { HouseRules, DEFAULT_HOUSE_RULES } from "./lib/types";
-import { generateStrategyTable, type StrategyTable } from "./lib/ev-calculator";
+import { generateStrategyTable } from "./lib/ev-calculator";
 import { SettingsPanel, StatsBar, GameArea, MistakesLog, TrainingMode } from "./components";
 import { useGameState, useSessionStats, useIncorrectPlays, useTrainingMode } from "./hooks";
 import { useTheme } from "./theme-context";
