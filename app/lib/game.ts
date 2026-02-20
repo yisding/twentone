@@ -308,7 +308,7 @@ export function getHandResult(
 
   const playerValue = calculateHandValue(playerHand).total;
   const dealerValue = calculateHandValue(dealerHand).total;
-  const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplitAces;
+  const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplit;
   const dealerIsBlackjack = isBlackjack(dealerHand);
 
   if (isBusted(playerHand)) return "lose";
