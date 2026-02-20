@@ -103,7 +103,7 @@ export function useGameState(
       if (!gameState || gameState.phase !== "playing") return;
 
       const currentHand = gameState.playerHands[gameState.currentHandIndex];
-      const expectedAction = getBasicStrategyAction(currentHand, gameState.dealerHand, rules);
+      const expectedAction = getExpectedPlayableAction(gameState, rules);
       const isCorrect = action === expectedAction;
 
       if (!isCorrect && onIncorrectPlay) {
@@ -177,7 +177,7 @@ function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, 
   let newState: GameState;
   
   if (checkStrategy) {
-    const expectedAction = getBasicStrategyAction(currentHand, state.dealerHand, rules);
+    const expectedAction = getExpectedPlayableAction(state, rules);
     const isCorrect = action === expectedAction;
     newState = {
       ...state,
@@ -199,6 +199,25 @@ function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, 
   }
 
   return newState;
+}
+
+function getExpectedPlayableAction(state: GameState, rules: HouseRules): PlayerAction {
+  const hand = state.playerHands[state.currentHandIndex];
+  const expectedAction = getBasicStrategyAction(hand, state.dealerHand, rules);
+  const availableActions = getAvailableActions(state, rules);
+
+  if (availableActions.includes(expectedAction)) {
+    return expectedAction;
+  }
+
+  if (
+    (expectedAction === "double" || expectedAction === "split") &&
+    availableActions.includes("hit")
+  ) {
+    return "hit";
+  }
+
+  return "stand";
 }
 
 function calculateTotalWinnings(gameState: GameState, rules: HouseRules): number {

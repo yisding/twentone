@@ -424,7 +424,7 @@ export function simulateHouseEdge(
     }
 
     // Check naturals
-    const playerBJ = playerHand.isBlackjack && !playerHand.isSplitAces;
+    const playerBJ = playerHand.isBlackjack && !playerHand.isSplit;
     let dealerBJ = dealerHand.isBlackjack;
 
     if (playerBJ || dealerBJ) {
@@ -614,7 +614,7 @@ export function simulateHouseEdge(
         continue;
       }
 
-      const playerBJHand = ph.isBlackjack && !ph.isSplitAces;
+      const playerBJHand = ph.isBlackjack && !ph.isSplit;
       if (playerBJHand && !dealerIsBJ) {
         roundReturned += bet + bet * rc.bjPayMultiplier;
         continue;
@@ -649,8 +649,6 @@ export function simulateHouseEdge(
       wins++;
     } else if (netResult === 0) {
       pushes++;
-    } else if (roundSurrenders > 0) {
-      losses += roundSurrenders;
     } else {
       losses++;
     }
