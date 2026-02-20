@@ -7,6 +7,7 @@ import {
   isBusted,
   canSplit,
   canDouble,
+  getCardValue,
 } from "./deck";
 import { getBasicStrategyAction } from "./strategy";
 
@@ -154,10 +155,18 @@ function simulateHand(deck: Card[], rules: HouseRules): { returned: number; bet:
   }
 
   const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplitAces;
-  const dealerIsBlackjack = isBlackjack(dealerHand);
+  let dealerIsBlackjack = isBlackjack(dealerHand);
 
   if (playerIsBlackjack || dealerIsBlackjack) {
-    getHandResult(playerHand, dealerHand);
+    // Under no hole card rules: only deal one card if dealer shows 10/Ace
+    if (rules.noHoleCard && playerIsBlackjack && dealerHand.cards.length === 1) {
+      const upCardValue = getCardValue(dealerHand.cards[0]);
+      if (upCardValue === 10 || upCardValue === 11) {
+        const holeDeal = dealCard(currentDeck);
+        dealerHand.cards.push(holeDeal.card);
+        currentDeck = holeDeal.remainingDeck;
+      }
+    }
     const bet = 1;
     const returned = playHand(playerHand, dealerHand, rules);
     return { returned, bet, deck: currentDeck, surrenders: 0 };

@@ -425,9 +425,18 @@ export function simulateHouseEdge(
 
     // Check naturals
     const playerBJ = playerHand.isBlackjack && !playerHand.isSplitAces;
-    const dealerBJ = dealerHand.isBlackjack;
+    let dealerBJ = dealerHand.isBlackjack;
 
     if (playerBJ || dealerBJ) {
+      // Under no hole card rules: only deal one card if dealer shows 10/Ace
+      if (rc.noHoleCard && playerBJ && dealerHand.cardCount === 1) {
+        const upCardValue = RANK_VALUE[dealerHand.cards[0]];
+        if (upCardValue === 10 || upCardValue === 11) {
+          dealerHand.addCard(shoe[deckIdx++]);
+          dealerBJ = dealerHand.isBlackjack;
+        }
+      }
+
       const bet = 1;
       totalBet += bet;
       if (playerBJ && !dealerBJ) {
