@@ -149,6 +149,7 @@ function getSoftTotalStrategy(
   }
 
   if (total === 17) {
+    if (rules.hitSoft17 && dealerValue === 2 && canDouble) return "double";
     if (dealerValue >= 3 && dealerValue <= 6 && canDouble) return "double";
     return "hit";
   }
@@ -380,6 +381,9 @@ function getSoftExplanation(
     }
     if (total === 18 && dealerValue === 2 && rules.hitSoft17) {
       ruleNotes.push("This double is only correct with H17 rules. With S17, just stand.");
+    }
+    if (total === 17 && dealerValue === 2 && rules.hitSoft17) {
+      ruleNotes.push("This double is only correct with H17 rules. With S17, just hit.");
     }
     return `Soft ${total} can't bust, and doubling against a weak dealer maximizes profit when you're likely to improve.`;
   }

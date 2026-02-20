@@ -200,7 +200,7 @@ function runComparison() {
     { playerCards: [card("A"), card("7")], dealerUpCard: card("9"), expected: "hit", category: "H17 - Soft 18 vs 9 hit" },
     { playerCards: [card("A"), card("6")], dealerUpCard: card("3"), expected: "double", category: "H17 - Soft 17 vs 3 double" },
     { playerCards: [card("A"), card("6")], dealerUpCard: card("6"), expected: "double", category: "H17 - Soft 17 vs 6 double" },
-    { playerCards: [card("A"), card("6")], dealerUpCard: card("2"), expected: "hit", category: "H17 - Soft 17 vs 2 hit" },
+    { playerCards: [card("A"), card("6")], dealerUpCard: card("2"), expected: "double", category: "H17 - Soft 17 vs 2 double" },
   ];
 
   allDiscrepancies.push(...runTestSuite("H17 rules (Dealer hits on soft 17)", h17TestCases, H17_RULES));
