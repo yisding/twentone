@@ -83,9 +83,9 @@ console.log("\n=== Testing Soft 18 vs 2 with H17 ===");
 test("Soft 18 vs 2 with H17 = double", { ...baseRules, hitSoft17: true }, [createCard("A"), createCard("7")], 2, "double");
 test("Soft 18 vs 2 with S17 = stand", { ...baseRules, hitSoft17: false }, [createCard("A"), createCard("7")], 2, "stand");
 
-console.log("\n=== Testing Hard 16 surrender vs 9 with H17 ===");
-test("Hard 16 vs 9 with H17 + surrender = hit", { ...baseRules, hitSoft17: true, surrenderAllowed: "late" }, [createCard("10"), createCard("6")], 9, "hit");
-test("Hard 16 vs 9 with S17 + surrender = surrender", { ...baseRules, hitSoft17: false, surrenderAllowed: "late" }, [createCard("10"), createCard("6")], 9, "surrender");
+console.log("\n=== Testing Hard 16 surrender vs 9 by deck count ===");
+test("Hard 16 vs 9 with 6D + surrender = surrender", { ...baseRules, surrenderAllowed: "late" }, [createCard("10"), createCard("6")], 9, "surrender");
+test("Hard 16 vs 9 with 2D + surrender = hit", { ...baseRules, decks: 2, surrenderAllowed: "late" }, [createCard("10"), createCard("6")], 9, "hit");
 test("Hard 16 vs 10 with H17 + surrender = surrender", { ...baseRules, hitSoft17: true, surrenderAllowed: "late" }, [createCard("10"), createCard("6")], 10, "surrender");
 test("Hard 16 vs A with H17 + surrender = surrender", { ...baseRules, hitSoft17: true, surrenderAllowed: "late" }, [createCard("10"), createCard("6")], 11, "surrender");
 
@@ -176,12 +176,12 @@ testExplanation(
   true
 );
 
-console.log("\n--- Hard 16 vs 9 H17 note ---");
+console.log("\n--- Hard 16 vs 9 deck note ---");
 testExplanation(
-  "Hard 16 vs 9 with H17 (hit) should have S17 surrender note",
-  { ...baseRules, hitSoft17: true, surrenderAllowed: "late" },
+  "Hard 16 vs 9 with 2D (hit) should have 4+ decks surrender note",
+  { ...baseRules, decks: 2, surrenderAllowed: "late" },
   [createCard("10"), createCard("6")], 9,
-  "S17",
+  "4+ decks",
   true
 );
 

@@ -174,27 +174,15 @@ function simulateHand(deck: Card[], rules: HouseRules): { returned: number; bet:
       const availableActions = getAvailableActions(hand, playerHands, rules);
 
       if (!availableActions.includes(action)) {
-        if (action === "double" && availableActions.includes("hit")) {
+        if ((action === "double" || action === "split") && availableActions.includes("hit")) {
           const hitDeal = dealCard(currentDeck);
           hand = {
             ...hand,
             cards: [...hand.cards, hitDeal.card],
           };
           currentDeck = hitDeal.remainingDeck;
-          hand = { ...hand, isStanding: true };
           playerHands[currentHandIndex] = hand;
-          break;
-        }
-        if (action === "split" && availableActions.includes("hit")) {
-          const hitDeal = dealCard(currentDeck);
-          hand = {
-            ...hand,
-            cards: [...hand.cards, hitDeal.card],
-          };
-          currentDeck = hitDeal.remainingDeck;
-          hand = { ...hand, isStanding: true };
-          playerHands[currentHandIndex] = hand;
-          break;
+          continue;
         }
         hand = { ...hand, isStanding: true };
         playerHands[currentHandIndex] = hand;

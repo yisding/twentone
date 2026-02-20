@@ -83,7 +83,7 @@ function runComparison() {
   // S17 tests
   const s17TestCases: TestCase[] = [
     // Surrender (dealer stands on soft 17)
-    { playerCards: [card("10"), card("6")], dealerUpCard: card("9"), expected: "surrender", category: "Surrender" },
+    { playerCards: [card("10"), card("6")], dealerUpCard: card("9"), expected: "surrender", category: "Surrender - 16 vs 9 surrender (6D)" },
     { playerCards: [card("10"), card("6")], dealerUpCard: card("K"), expected: "surrender", category: "Surrender" },
     { playerCards: [card("10"), card("6")], dealerUpCard: card("A"), expected: "surrender", category: "Surrender" },
     { playerCards: [card("10"), card("5")], dealerUpCard: card("10"), expected: "surrender", category: "Surrender" },
@@ -183,7 +183,7 @@ function runComparison() {
     { playerCards: [card("10"), card("7")], dealerUpCard: card("A"), expected: "surrender", category: "H17 - 17 vs A surrender" },
     // Additional H17 tests
     { playerCards: [card("10"), card("6")], dealerUpCard: card("A"), expected: "surrender", category: "H17 - 16 vs A surrender" },
-    { playerCards: [card("10"), card("6")], dealerUpCard: card("9"), expected: "hit", category: "H17 - 16 vs 9 hit (not surrender with H17)" },
+    { playerCards: [card("10"), card("6")], dealerUpCard: card("9"), expected: "surrender", category: "H17 - 16 vs 9 surrender" },
     { playerCards: [card("A"), card("7")], dealerUpCard: card("8"), expected: "stand", category: "H17 - Soft 18 vs 8 stand" },
     { playerCards: [card("A"), card("7")], dealerUpCard: card("9"), expected: "hit", category: "H17 - Soft 18 vs 9 hit" },
     { playerCards: [card("A"), card("6")], dealerUpCard: card("3"), expected: "double", category: "H17 - Soft 17 vs 3 double" },

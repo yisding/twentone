@@ -1,7 +1,7 @@
 import { Hand, HouseRules, PlayerAction } from "./types";
 import { calculateHandValue, getCardValue, getDealerUpCard } from "./deck";
 import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
-import type { StrategyTable, StrategyEntry } from "./ev-calculator";
+import type { StrategyTable } from "./ev-calculator";
 
 const currentProbs = INFINITE_DECK_PROBS.slice();
 
@@ -154,6 +154,45 @@ function computeOptimalEV(total: number, isSoft: boolean, dealerUpcard: number, 
   return best;
 }
 
+function setProbs(rules: HouseRules, playerHand: Hand, dealerHand: Hand): void {
+  dealerMemo.clear();
+  hitMemo.clear();
+  optimalMemo.clear();
+
+  if (rules.decks < 1 || rules.decks > 8) {
+    // Infinite deck
+    for (let i = 0; i < N; i++) currentProbs[i] = INFINITE_DECK_PROBS[i];
+    return;
+  }
+
+  // Build shoe counts per card value
+  const counts = new Float64Array(N);
+  const decks = rules.decks;
+  for (let i = 0; i < N; i++) {
+    counts[i] = i === 8 ? 16 * decks : 4 * decks;
+  }
+
+  // Remove player cards and dealer upcard
+  const cardsToRemove = [...playerHand.cards];
+  const upCard = getDealerUpCard(dealerHand);
+  if (upCard) cardsToRemove.push(upCard);
+
+  for (const card of cardsToRemove) {
+    const idx = getCardValue(card) - 2;
+    counts[idx] = Math.max(0, counts[idx] - 1);
+  }
+
+  // Convert to probabilities
+  let totalCards = 0;
+  for (let i = 0; i < N; i++) totalCards += counts[i];
+
+  if (totalCards === 0) {
+    for (let i = 0; i < N; i++) currentProbs[i] = INFINITE_DECK_PROBS[i];
+  } else {
+    for (let i = 0; i < N; i++) currentProbs[i] = counts[i] / totalCards;
+  }
+}
+
 function canDouble(total: number, rules: HouseRules): boolean {
   if (rules.doubleRestriction === "9-11") return total >= 9 && total <= 11;
   if (rules.doubleRestriction === "10-11") return total >= 10 && total <= 11;
@@ -171,6 +210,7 @@ export function computeActionEVs(
   dealerHand: Hand,
   rules: HouseRules,
 ): ActionEV[] {
+  setProbs(rules, playerHand, dealerHand);
   const { total, isSoft } = calculateHandValue(playerHand);
   const dealerUpCard = getDealerUpCard(dealerHand);
   if (!dealerUpCard) return [];
@@ -216,78 +256,12 @@ export interface EVCostInfo {
   evLossPercent: string;
 }
 
-function lookupStrategyEntry(
-  playerHand: Hand,
-  dealerValue: number,
-  strategyTable: StrategyTable,
-): StrategyEntry | null {
-  const { total, isSoft } = calculateHandValue(playerHand);
-  const isPair = playerHand.cards.length === 2 &&
-    playerHand.cards[0].rank === playerHand.cards[1].rank;
-
-  if (isPair) {
-    const cv = getCardValue(playerHand.cards[0]);
-    return strategyTable.pairs.get(cv)?.get(dealerValue) ?? null;
-  }
-  if (isSoft) {
-    return strategyTable.soft.get(total)?.get(dealerValue) ?? null;
-  }
-  return strategyTable.hard.get(total)?.get(dealerValue) ?? null;
-}
-
-function buildAvailableActionEVsFromStrategyEntry(
-  playerHand: Hand,
-  rules: HouseRules,
-  entry: StrategyEntry,
-): ActionEV[] {
-  const evs = entry.evs!;
-  const isTwoCardHand = playerHand.cards.length === 2;
-  const isPair = isTwoCardHand &&
-    playerHand.cards[0].rank === playerHand.cards[1].rank;
-  const { total } = calculateHandValue(playerHand);
-
-  const available: ActionEV[] = [
-    { action: "stand", ev: evs.stand, isAvailable: true },
-    { action: "hit", ev: evs.hit, isAvailable: true },
-  ];
-
-  if (evs.double !== undefined && isTwoCardHand &&
-      canDouble(total, rules) &&
-      (!playerHand.isSplit || rules.doubleAfterSplit)) {
-    available.push({ action: "double", ev: evs.double, isAvailable: true });
-  }
-
-  if (evs.split !== undefined && isPair &&
-      rules.maxSplitHands >= 2 && !playerHand.isSplit) {
-    available.push({ action: "split", ev: evs.split, isAvailable: true });
-  }
-
-  if (evs.surrender !== undefined &&
-      rules.surrenderAllowed !== "none" && isTwoCardHand && !playerHand.isSplit) {
-    available.push({ action: "surrender", ev: evs.surrender, isAvailable: true });
-  }
-
-  return available;
-}
-
 export function computeAvailableActionEVs(
   playerHand: Hand,
   dealerHand: Hand,
   rules: HouseRules,
   strategyTable?: StrategyTable | null,
 ): ActionEV[] {
-  const dealerUpCard = getDealerUpCard(dealerHand);
-  if (!dealerUpCard) return [];
-  const dealerValue = getCardValue(dealerUpCard);
-
-  const entry = strategyTable
-    ? lookupStrategyEntry(playerHand, dealerValue, strategyTable)
-    : null;
-
-  if (entry?.evs) {
-    return buildAvailableActionEVsFromStrategyEntry(playerHand, rules, entry);
-  }
-
   return computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
 }
 

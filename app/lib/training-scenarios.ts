@@ -321,15 +321,15 @@ export const TRAINING_SCENARIOS: TrainingScenario[] = [
   {
     id: "surrender-16-vs-9",
     category: "surrenders",
-    description: "Hard 16 vs Dealer 9 (S17)",
+    description: "Hard 16 vs Dealer 9 (4+ decks)",
     playerCards: [createCard("10", H), createCard("6", D)],
     dealerUpCard: createCard("9", S),
     expectedAction: "surrender",
-    explanation: "With S17, surrender 16 vs 9. With H17, just hit.",
+    explanation: "With 4+ decks, surrender 16 vs 9. With 1-2 decks, just hit.",
     difficulty: 3,
     rulesVariants: [
-      { surrenderAllowed: "late", hitSoft17: false },
-      { surrenderAllowed: "late", hitSoft17: true },
+      { surrenderAllowed: "late", decks: 6 },
+      { surrenderAllowed: "late", decks: 2 },
     ],
   },
   {

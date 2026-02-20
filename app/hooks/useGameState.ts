@@ -189,9 +189,9 @@ function calculateTotalWinnings(gameState: GameState, rules: HouseRules): number
     const bjPayout = rules.blackjackPays === "3:2" ? 1.5 : rules.blackjackPays === "6:5" ? 1.2 : 1;
 
     if (result === "win") total += bet;
-    else if (result === "blackjack") total += Math.round(bet * bjPayout);
+    else if (result === "blackjack") total += bet * bjPayout;
     else if (result === "lose") total -= bet;
-    else if (result === "surrender") total -= 5;
+    else if (result === "surrender") total -= bet / 2;
   }
   return total;
 }
