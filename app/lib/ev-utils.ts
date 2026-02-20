@@ -398,17 +398,74 @@ export function computeActionEVs(
     cdHitMemo.clear();
     cdOptMemo.clear();
 
-    // Build dealer distribution with shoe tracking
-    const dd = cdDealerDist(dealerValue, rules.hitSoft17, shoe, st);
+    const forbiddenHoleIdx = dealerValue === 11 ? 8 : dealerValue === 10 ? 9 : -1;
+    const shouldConditionHoleCard = !rules.noHoleCard && forbiddenHoleIdx >= 0;
 
-    // Player EVs with shoe tracking
-    standEV = evStand(total, dd);
-    hitEV = cdHitEV(total, isSoft, dd, shoe, st);
-    if (dblAllowed) {
-      dblEV = cdDoubleEV(total, isSoft, dd, shoe, st);
-    }
-    if (splitAllowed && pairValue !== null) {
-      splitEv = cdSplitEV(pairValue, dd, shoe, st, rules);
+    if (shouldConditionHoleCard) {
+      // Peek game with a 10/A upcard: condition on the revealed fact that dealer
+      // does not have blackjack by explicitly averaging over legal hole cards.
+      // This improves CD decision EV accuracy because player-draw probabilities
+      // are also conditioned by the hidden-card information.
+      const legalHoleMass = st - shoe[forbiddenHoleIdx];
+
+      if (legalHoleMass <= 0) {
+        // Degenerate state fallback
+        const dd = cdDealerDist(dealerValue, rules.hitSoft17, shoe, st);
+        standEV = evStand(total, dd);
+        hitEV = cdHitEV(total, isSoft, dd, shoe, st);
+        if (dblAllowed) dblEV = cdDoubleEV(total, isSoft, dd, shoe, st);
+        if (splitAllowed && pairValue !== null) splitEv = cdSplitEV(pairValue, dd, shoe, st, rules);
+      } else {
+        let aggStand = 0;
+        let aggHit = 0;
+        let aggDbl = 0;
+        let aggSplit = 0;
+
+        for (let hi = 0; hi < N; hi++) {
+          if (hi === forbiddenHoleIdx || shoe[hi] === 0) continue;
+          const pHole = shoe[hi] / legalHoleMass;
+
+          shoe[hi]--;
+          const stAfterHole = st - 1;
+
+          cdDealerMemo.clear();
+          cdHitMemo.clear();
+          cdOptMemo.clear();
+
+          const holeCard = CARD_VALUES[hi];
+          const [t1, s1] = addCard(dealerValue, dealerValue === 11, holeCard);
+          const dd = cdDealerRec(t1, s1, rules.hitSoft17, shoe, stAfterHole);
+
+          aggStand += pHole * evStand(total, dd);
+          aggHit += pHole * cdHitEV(total, isSoft, dd, shoe, stAfterHole);
+          if (dblAllowed) {
+            aggDbl += pHole * cdDoubleEV(total, isSoft, dd, shoe, stAfterHole);
+          }
+          if (splitAllowed && pairValue !== null) {
+            aggSplit += pHole * cdSplitEV(pairValue, dd, shoe, stAfterHole, rules);
+          }
+
+          shoe[hi]++;
+        }
+
+        standEV = aggStand;
+        hitEV = aggHit;
+        dblEV = aggDbl;
+        splitEv = aggSplit;
+      }
+    } else {
+      // Build dealer distribution with shoe tracking
+      const dd = cdDealerDist(dealerValue, rules.hitSoft17, shoe, st);
+
+      // Player EVs with shoe tracking
+      standEV = evStand(total, dd);
+      hitEV = cdHitEV(total, isSoft, dd, shoe, st);
+      if (dblAllowed) {
+        dblEV = cdDoubleEV(total, isSoft, dd, shoe, st);
+      }
+      if (splitAllowed && pairValue !== null) {
+        splitEv = cdSplitEV(pairValue, dd, shoe, st, rules);
+      }
     }
   } else {
     // Infinite deck: fixed probabilities
