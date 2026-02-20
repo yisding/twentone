@@ -416,8 +416,8 @@ export function simulateHouseEdge(
   let surrenders = 0;
 
   for (let i = 0; i < numHands; i++) {
-    // Check reshuffle — ensure enough cards for a full round (worst case ~30 cards)
-    if (shoeSize - deckIdx < Math.max(rc.minCards, 30)) {
+    // Match simulation.ts reshuffle behavior so edge comparisons are apples-to-apples.
+    if (shoeSize - deckIdx < rc.minCards) {
       shuffleShoe(shoe);
       deckIdx = 0;
     }
@@ -551,6 +551,7 @@ export function simulateHouseEdge(
           const card1Rank = hand.cards[0];
           const card2Rank = hand.cards[1];
           const isSplittingAces = card1Rank === 1;
+          const wasSplitAces = hand.isSplitAces;
 
           const newHand1 = hand; // reuse current slot
           const newHand2Idx = numPlayerHands;
@@ -559,12 +560,12 @@ export function simulateHouseEdge(
 
           newHand1.reset();
           newHand1.isSplit = true;
-          newHand1.isSplitAces = isSplittingAces || hand.isSplitAces;
+          newHand1.isSplitAces = isSplittingAces || wasSplitAces;
           newHand1.setFirstCard(card1Rank);
           newHand1.addCard(drawRank());
 
           newHand2.isSplit = true;
-          newHand2.isSplitAces = isSplittingAces || hand.isSplitAces;
+          newHand2.isSplitAces = isSplittingAces || wasSplitAces;
           newHand2.setFirstCard(card2Rank);
           newHand2.addCard(drawRank());
 
