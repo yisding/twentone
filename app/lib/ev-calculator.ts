@@ -940,38 +940,123 @@ export function generateStrategyTable(
       const [total, isSoft] = addCard(cv, cv === 11, cv);
       const canSurr = rules.surrenderAllowed === "late";
 
-      // Non-split optimal EV
-      const noSplitEV = evOptimal(total, isSoft, true, canSurr);
-
-      // Split EV
-      const splitEv =
-        rules.maxSplitHands >= 2 ? evSplit(cv) : -Infinity;
-
-      let bestAction: ActionName;
-      let bestEV: number;
-
-      // Compute stand/hit/double EVs for the pair as a regular hand
-      const standEV = evStand(total);
-      let hitEV = 0;
-      for (let i = 0; i < N; i++) {
-        const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
-        hitEV += currentProbs[i] * evOptimal(nt, ns, false, false);
-      }
+      let standEV: number;
+      let hitEV: number;
+      let dblEV = 0;
       let dblAllowed = true;
+      let splitEv: number;
+
       if (rules.doubleRestriction === "9-11")
         dblAllowed = total >= 9 && total <= 11;
       else if (rules.doubleRestriction === "10-11")
         dblAllowed = total >= 10 && total <= 11;
-      let dblEV = 0;
-      if (dblAllowed) {
+
+      if (useFiniteDeck) {
+        // Full composition-dependent calculation for pairs.
+        // Remove the pair cards from the shoe and use CD functions that
+        // track shoe state through every draw, giving exact EVs for
+        // borderline decisions like 7,7 vs 8 in 2 decks.
+        const cvIdx = cv === 11 ? 9 : cv - 2;
+        shoe![cvIdx] -= 2;
+        const st = totalCards - 3;
+
+        // Build CD dealer distribution (aggregate over unknown hole card)
+        dealerCDMemo.clear();
+        const pairDist = new Float64Array(6);
         for (let i = 0; i < N; i++) {
-          const [nt] = addCard(total, isSoft, CARD_VALUES[i]);
-          dblEV += currentProbs[i] * (nt > 21 ? -1 : evStand(nt));
+          if (shoe![i] === 0) continue;
+          const pH = shoe![i] / st;
+          const holeCard = CARD_VALUES[i];
+          const [t1, s1] = addCard(upcard, upcard === 11, holeCard);
+          shoe![i]--;
+          const sub = dealerRecCD(t1, s1, shoe!, st - 1);
+          shoe![i]++;
+          for (let j = 0; j < 6; j++) pairDist[j] += pH * sub[j];
         }
-        dblEV *= 2;
+
+        // Condition on no dealer blackjack
+        let bjP = 0;
+        if (upcard === 11 && shoe![8] > 0) bjP = shoe![8] / st;
+        else if (upcard === 10 && shoe![9] > 0) bjP = shoe![9] / st;
+        const pairDD = new Float64Array(6);
+        for (let j = 0; j < 6; j++) pairDD[j] = pairDist[j];
+        if (bjP > 0 && !rules.noHoleCard) {
+          pairDD[D21] -= bjP;
+          const scale = 1 / (1 - bjP);
+          for (let j = 0; j < 6; j++) pairDD[j] *= scale;
+        }
+        currentDD = pairDD;
+        playerCDMemo = new Map();
+
+        // Stand EV
+        standEV = evStand(total);
+
+        // Hit EV (CD: tracks shoe through subsequent draws)
+        hitEV = 0;
+        for (let i = 0; i < N; i++) {
+          if (shoe![i] === 0) continue;
+          const p = shoe![i] / st;
+          const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
+          shoe![i]--;
+          hitEV += p * evOptimalCD(nt, ns, false, false, shoe!, st - 1);
+          shoe![i]++;
+        }
+
+        // Double EV
+        if (dblAllowed) {
+          for (let i = 0; i < N; i++) {
+            if (shoe![i] === 0) continue;
+            const p = shoe![i] / st;
+            const [nt] = addCard(total, isSoft, CARD_VALUES[i]);
+            dblEV += p * (nt > 21 ? -1 : evStand(nt));
+          }
+          dblEV *= 2;
+        }
+
+        // Split EV (CD: tracks shoe through all draws in both split hands)
+        splitEv = rules.maxSplitHands >= 2 ? evSplitCD(cv, shoe!, st) : -Infinity;
+
+        // Restore shoe
+        shoe![cvIdx] += 2;
+        shoeToProbs(shoe!, totalCards - 1);
+        dealerMemo.clear();
+        currentDD = dd;
+        playerMemo = new Map();
+      } else {
+        // Infinite deck: standard computation
+        standEV = evStand(total);
+
+        hitEV = 0;
+        for (let i = 0; i < N; i++) {
+          const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
+          hitEV += currentProbs[i] * evOptimal(nt, ns, false, false);
+        }
+
+        if (dblAllowed) {
+          for (let i = 0; i < N; i++) {
+            const [nt] = addCard(total, isSoft, CARD_VALUES[i]);
+            dblEV += currentProbs[i] * (nt > 21 ? -1 : evStand(nt));
+          }
+          dblEV *= 2;
+        }
+
+        const noSplitEV = evOptimal(total, isSoft, true, canSurr);
+        splitEv = rules.maxSplitHands >= 2 ? evSplit(cv) : -Infinity;
+        // For infinite deck, splitEv comparison uses noSplitEV
+        void noSplitEV;
       }
 
-      if (splitEv > noSplitEV) {
+      let bestAction: ActionName;
+      let bestEV: number;
+
+      const noSplitBest = Math.max(
+        standEV,
+        hitEV,
+        dblAllowed ? dblEV : -Infinity,
+        canSurr ? -0.5 : -Infinity,
+      );
+
+      if (splitEv > noSplitBest) {
         bestAction = "P";
         bestEV = splitEv;
       } else {

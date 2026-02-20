@@ -240,30 +240,31 @@ function buildAvailableActionEVsFromStrategyEntry(
   rules: HouseRules,
   entry: StrategyEntry,
 ): ActionEV[] {
+  const evs = entry.evs!;
   const isTwoCardHand = playerHand.cards.length === 2;
   const isPair = isTwoCardHand &&
     playerHand.cards[0].rank === playerHand.cards[1].rank;
   const { total } = calculateHandValue(playerHand);
 
   const available: ActionEV[] = [
-    { action: "stand", ev: entry.evs.stand, isAvailable: true },
-    { action: "hit", ev: entry.evs.hit, isAvailable: true },
+    { action: "stand", ev: evs.stand, isAvailable: true },
+    { action: "hit", ev: evs.hit, isAvailable: true },
   ];
 
-  if (entry.evs.double !== undefined && isTwoCardHand &&
+  if (evs.double !== undefined && isTwoCardHand &&
       canDouble(total, rules) &&
       (!playerHand.isSplit || rules.doubleAfterSplit)) {
-    available.push({ action: "double", ev: entry.evs.double, isAvailable: true });
+    available.push({ action: "double", ev: evs.double, isAvailable: true });
   }
 
-  if (entry.evs.split !== undefined && isPair &&
+  if (evs.split !== undefined && isPair &&
       rules.maxSplitHands >= 2 && !playerHand.isSplit) {
-    available.push({ action: "split", ev: entry.evs.split, isAvailable: true });
+    available.push({ action: "split", ev: evs.split, isAvailable: true });
   }
 
-  if (entry.evs.surrender !== undefined &&
+  if (evs.surrender !== undefined &&
       rules.surrenderAllowed !== "none" && isTwoCardHand && !playerHand.isSplit) {
-    available.push({ action: "surrender", ev: entry.evs.surrender, isAvailable: true });
+    available.push({ action: "surrender", ev: evs.surrender, isAvailable: true });
   }
 
   return available;
