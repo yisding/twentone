@@ -66,7 +66,10 @@ export function useGameState(
   const startNewGame = useCallback(() => {
     let newGame = initGame(rules);
     const playerHasBlackjack = isBlackjack(newGame.playerHands[0]);
-    const dealerHasBlackjack = !rules.noHoleCard && isBlackjack(newGame.dealerHand);
+    const dealerHasBlackjack =
+      !rules.noHoleCard &&
+      rules.surrenderAllowed !== "early" &&
+      isBlackjack(newGame.dealerHand);
     if (playerHasBlackjack || dealerHasBlackjack) {
       if (rules.noHoleCard) {
         // No hole card rules: only deal one card if dealer shows 10/Ace
@@ -114,6 +117,13 @@ export function useGameState(
       }
 
       let newState = applyAction(gameState, action, rules, true);
+
+      if (shouldResolveDealerBlackjackAfterEarlySurrenderDecision(gameState, rules, action)) {
+        newState = {
+          ...newState,
+          phase: "resolved",
+        };
+      }
 
       if (newState.phase === "playing" && 
           (isBusted(newState.playerHands[newState.currentHandIndex]) || 
@@ -190,15 +200,39 @@ function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, 
     newState = state;
   }
 
-  switch (action) {
-    case "hit": newState = playerHit(newState); break;
-    case "stand": newState = playerStand(newState); break;
-    case "double": newState = playerDouble(newState); break;
-    case "split": newState = playerSplit(newState); break;
-    case "surrender": newState = playerSurrender(newState); break;
+  const shouldApplyAction = !shouldResolveDealerBlackjackAfterEarlySurrenderDecision(state, rules, action);
+
+  if (shouldApplyAction) {
+    switch (action) {
+      case "hit": newState = playerHit(newState); break;
+      case "stand": newState = playerStand(newState); break;
+      case "double": newState = playerDouble(newState); break;
+      case "split": newState = playerSplit(newState); break;
+      case "surrender": newState = playerSurrender(newState); break;
+    }
   }
 
   return newState;
+}
+
+function shouldResolveDealerBlackjackAfterEarlySurrenderDecision(
+  state: GameState,
+  rules: HouseRules,
+  action: PlayerAction,
+): boolean {
+  if (action === "surrender") return false;
+  if (rules.surrenderAllowed !== "early") return false;
+  if (rules.noHoleCard) return false;
+  if (state.currentHandIndex !== 0 || state.playerHands.length !== 1) return false;
+
+  const hand = state.playerHands[0];
+  const dealerUpCard = getDealerUpCard(state.dealerHand);
+  const dealerUpCardValue = dealerUpCard ? getCardValue(dealerUpCard) : 0;
+
+  if (hand.cards.length !== 2 || hand.isSplit) return false;
+  if (dealerUpCardValue !== 10 && dealerUpCardValue !== 11) return false;
+
+  return isBlackjack(state.dealerHand);
 }
 
 function getExpectedPlayableAction(state: GameState, rules: HouseRules): PlayerAction {
