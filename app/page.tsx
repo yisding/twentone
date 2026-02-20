@@ -67,7 +67,7 @@ export default function Home() {
           {gameMode === "practice" && (
             <>
               <StatsBar stats={stats} rules={rules} onReset={resetStats} />
-              <div className="p-6">
+              <div className="p-3 sm:p-6">
                 {gameState ? (
                   <GameArea
                     gameState={gameState}
@@ -96,7 +96,7 @@ export default function Home() {
                 trainingStats={trainingStats}
                 onReset={resetProgress}
               />
-              <div className="p-6">
+              <div className="p-3 sm:p-6">
                 <TrainingMode
                   currentScenario={trainingState.currentScenario}
                   showAnswer={trainingState.showAnswer}
@@ -139,11 +139,10 @@ function ModeSelector({
         role="tab"
         aria-selected={currentMode === "practice"}
         onClick={() => onModeChange("practice")}
-        className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
-          currentMode === "practice"
+        className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${currentMode === "practice"
             ? "bg-zinc-100 text-zinc-900 border-b-2 border-green-600"
             : "text-zinc-500 hover:text-zinc-700"
-        }`}
+          }`}
       >
         Practice Mode
       </button>
@@ -151,11 +150,10 @@ function ModeSelector({
         role="tab"
         aria-selected={currentMode === "training"}
         onClick={() => onModeChange("training")}
-        className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
-          currentMode === "training"
+        className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${currentMode === "training"
             ? "bg-zinc-100 text-zinc-900 border-b-2 border-green-600"
             : "text-zinc-500 hover:text-zinc-700"
-        }`}
+          }`}
       >
         Training Mode
       </button>
@@ -210,9 +208,9 @@ function TrainingStatsBar({
       : 0;
 
   return (
-    <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-200">
+    <div className="px-4 py-2 bg-zinc-50 border-b border-zinc-200">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-6 text-sm">
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm">
           <div>
             <span className="text-zinc-500">Session:</span>{" "}
             <span className="font-semibold">{sessionStats.correct}/{sessionStats.total}</span>
@@ -233,7 +231,7 @@ function TrainingStatsBar({
         </div>
         <button
           onClick={onReset}
-          className="text-xs text-zinc-400 hover:text-zinc-600"
+          className="text-xs text-zinc-400 hover:text-zinc-600 shrink-0"
         >
           Reset Progress
         </button>

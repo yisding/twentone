@@ -21,8 +21,8 @@ export function StatsBar({ stats, rules, onReset }: StatsBarProps) {
   });
 
   return (
-    <div className="p-4 bg-muted border-b">
-      <div className="flex items-center justify-center gap-8">
+    <div className="px-4 py-3 bg-muted border-b">
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
         <Stat value={stats.correct} label="Correct" className="text-green-600" />
         <Stat value={stats.wrong} label="Wrong" className="text-destructive" />
         <Stat value={`${accuracy}%`} label="Accuracy" />
@@ -49,8 +49,8 @@ interface StatProps {
 function Stat({ value, label, className }: StatProps) {
   return (
     <div className="text-center">
-      <div className={`text-2xl font-bold ${className || "text-foreground"}`}>{value}</div>
-      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className={`text-xl sm:text-2xl font-bold ${className || "text-foreground"}`}>{value}</div>
+      <div className="text-xs sm:text-sm text-muted-foreground">{label}</div>
     </div>
   );
 }

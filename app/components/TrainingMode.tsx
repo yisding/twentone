@@ -330,14 +330,14 @@ function FeedbackMessage({
       {actionEVs.length > 0 && (
         <div className="text-center">
           <div className={cn(
-            "inline-block rounded-lg px-4 py-2",
+            "inline-block rounded-lg px-3 py-2 max-w-full overflow-hidden",
             isCorrect
               ? "bg-green-50 border border-green-200"
               : "bg-red-50 border border-red-200"
           )}>
-            <div className="flex items-center gap-3 text-sm flex-wrap justify-center">
+            <div className="flex items-center gap-2 text-sm flex-wrap justify-center">
               {actionEVs.map((a, i) => (
-                <span key={a.action} className="flex items-center gap-3">
+                <span key={a.action} className="flex items-center gap-2">
                   {i > 0 && <span className="text-zinc-400">|</span>}
                   <span className={cn(
                     a.action === (expectedAction ?? chosenAction)
