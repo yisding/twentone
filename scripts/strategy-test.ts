@@ -54,6 +54,16 @@ const NO_SURRENDER_RULES: HouseRules = {
   surrenderAllowed: "none",
 };
 
+const DOUBLE_10_11_ONLY_RULES: HouseRules = {
+  ...H17_RULES,
+  doubleRestriction: "10-11",
+};
+
+const DOUBLE_9_11_ONLY_RULES: HouseRules = {
+  ...H17_RULES,
+  doubleRestriction: "9-11",
+};
+
 function runTestSuite(
   name: string,
   testCases: TestCase[],
@@ -231,6 +241,22 @@ function runComparison() {
   ];
 
   allDiscrepancies.push(...runTestSuite("No surrender rules", noSurrenderTestCases, NO_SURRENDER_RULES));
+
+  // Double restriction tests
+  const normalizedDoubleRestrictionCases: TestCase[] = [
+    { playerCards: [card("A"), card("7")], dealerUpCard: card("6"), expected: "stand", category: "Double 10-11 only - Soft 18 vs 6 stand" },
+    { playerCards: [card("A"), card("6")], dealerUpCard: card("4"), expected: "hit", category: "Double 10-11 only - Soft 17 vs 4 hit" },
+    { playerCards: [card("5"), card("4")], dealerUpCard: card("6"), expected: "hit", category: "Double 10-11 only - Hard 9 vs 6 hit" },
+  ];
+
+  allDiscrepancies.push(...runTestSuite("Double 10-11 only rules", normalizedDoubleRestrictionCases, DOUBLE_10_11_ONLY_RULES));
+
+  const double9to11TestCases: TestCase[] = [
+    { playerCards: [card("5"), card("4")], dealerUpCard: card("6"), expected: "double", category: "Double 9-11 only - Hard 9 vs 6 double" },
+    { playerCards: [card("A"), card("7")], dealerUpCard: card("6"), expected: "stand", category: "Double 9-11 only - Soft 18 vs 6 stand" },
+  ];
+
+  allDiscrepancies.push(...runTestSuite("Double 9-11 only rules", double9to11TestCases, DOUBLE_9_11_ONLY_RULES));
 
   return allDiscrepancies;
 }
