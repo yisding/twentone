@@ -126,6 +126,7 @@ class HandPool {
 interface RuleConstants {
   hitSoft17: boolean;
   canSurrender: boolean;
+  isEarlySurrender: boolean;
   isDAS: boolean;
   isSingleOrDoubleDeck: boolean;
   doubleRestriction: string;
@@ -141,6 +142,7 @@ function precomputeRules(rules: HouseRules): RuleConstants {
   return {
     hitSoft17: rules.hitSoft17,
     canSurrender: rules.surrenderAllowed !== "none",
+    isEarlySurrender: rules.surrenderAllowed === "early",
     isDAS: rules.doubleAfterSplit,
     isSingleOrDoubleDeck: rules.decks <= 2,
     doubleRestriction: rules.doubleRestriction,
@@ -457,7 +459,18 @@ export function simulateHouseEdge(
         blackjacks++;
         wins++;
       } else if (dealerBJ && !playerBJ) {
-        losses++;
+        if (!rc.noHoleCard && rc.isEarlySurrender) {
+          const action = getStrategyAction(playerHand, RANK_VALUE[dealerHand.cards[0]], rc);
+          if (action === Action.Surrender) {
+            totalReturned += bet * 0.5;
+            surrenders++;
+            losses++;
+          } else {
+            losses++;
+          }
+        } else {
+          losses++;
+        }
       } else {
         // Both blackjack = push
         totalReturned += bet;
