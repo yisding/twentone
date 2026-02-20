@@ -120,6 +120,7 @@ function splitHandEV(
   rules: HouseRules,
 ): number {
   let ev = 0;
+  const canDAS = !isAces && rules.doubleAfterSplit;
   for (let i = 0; i < N; i++) {
     const secondCard = CARD_VALUES[i];
     const [total, soft] = addCard(card, card === 11, secondCard);
@@ -128,11 +129,11 @@ function splitHandEV(
     if (isAces && !canResplit) {
       ev += currentProbs[i] * computeStandEV(total, dealerUpcard, rules.hitSoft17);
     } else if (canResplit) {
-      const playEV = computeOptimalEV(total, soft, dealerUpcard, rules);
+      const playEV = computeOptimalEV(total, soft, dealerUpcard, rules, canDAS);
       const resplitEV = 2 * splitHandEV(card, resplitsLeft - 1, isAces, dealerUpcard, rules);
       ev += currentProbs[i] * Math.max(playEV, resplitEV);
     } else {
-      ev += currentProbs[i] * computeOptimalEV(total, soft, dealerUpcard, rules);
+      ev += currentProbs[i] * computeOptimalEV(total, soft, dealerUpcard, rules, canDAS);
     }
   }
   return ev;
@@ -140,15 +141,25 @@ function splitHandEV(
 
 const optimalMemo = new Map<string, number>();
 
-function computeOptimalEV(total: number, isSoft: boolean, dealerUpcard: number, rules: HouseRules): number {
+function computeOptimalEV(total: number, isSoft: boolean, dealerUpcard: number, rules: HouseRules, canDoubleDown: boolean = false): number {
   if (total > 21) return -1;
-  const key = `${total}-${isSoft}-${dealerUpcard}-${rules.hitSoft17}`;
+  const key = `${total}-${isSoft}-${dealerUpcard}-${rules.hitSoft17}-${canDoubleDown}`;
   const cached = optimalMemo.get(key);
   if (cached !== undefined) return cached;
 
   let best = computeStandEV(total, dealerUpcard, rules.hitSoft17);
   const hitEV = computeHitEV(total, isSoft, dealerUpcard, rules.hitSoft17);
   if (hitEV > best) best = hitEV;
+
+  if (canDoubleDown) {
+    let dblAllowed = true;
+    if (rules.doubleRestriction === "9-11") dblAllowed = total >= 9 && total <= 11;
+    else if (rules.doubleRestriction === "10-11") dblAllowed = total >= 10 && total <= 11;
+    if (dblAllowed) {
+      const dblEV = computeDoubleEV(total, isSoft, dealerUpcard, rules.hitSoft17);
+      if (dblEV > best) best = dblEV;
+    }
+  }
 
   optimalMemo.set(key, best);
   return best;
@@ -262,7 +273,34 @@ export function computeAvailableActionEVs(
   rules: HouseRules,
   strategyTable?: StrategyTable | null,
 ): ActionEV[] {
-  return computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
+  const available = computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
+
+  // For pairs with a strategy table, use the more precise composition-dependent
+  // EVs from the strategy table. The approximate fixed-probability method in
+  // computeActionEVs can mis-order borderline decisions (e.g. 7,7 vs 8 in 2-deck).
+  if (strategyTable && playerHand.cards.length === 2) {
+    const isPair = playerHand.cards[0].rank === playerHand.cards[1].rank;
+    if (isPair) {
+      const pairValue = getCardValue(playerHand.cards[0]);
+      const dealerUpCard = getDealerUpCard(dealerHand);
+      if (dealerUpCard) {
+        const dealerValue = getCardValue(dealerUpCard);
+        const entry = strategyTable.pairs.get(pairValue)?.get(dealerValue);
+        if (entry?.evs) {
+          const tableEvs = entry.evs;
+          for (const a of available) {
+            if (a.action === "stand") a.ev = tableEvs.stand;
+            else if (a.action === "hit") a.ev = tableEvs.hit;
+            else if (a.action === "double" && tableEvs.double !== undefined) a.ev = tableEvs.double;
+            else if (a.action === "split" && tableEvs.split !== undefined) a.ev = tableEvs.split;
+            else if (a.action === "surrender" && tableEvs.surrender !== undefined) a.ev = tableEvs.surrender;
+          }
+        }
+      }
+    }
+  }
+
+  return available;
 }
 
 export function computeEVCost(
