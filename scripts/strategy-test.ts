@@ -83,7 +83,7 @@ function runComparison() {
   // S17 tests
   const s17TestCases: TestCase[] = [
     // Surrender (dealer stands on soft 17)
-    { playerCards: [card("10"), card("6")], dealerUpCard: card("9"), expected: "hit", category: "Surrender - 16 vs 9 hit (S17, don't surrender)" },
+    { playerCards: [card("10"), card("6")], dealerUpCard: card("9"), expected: "surrender", category: "Surrender - 16 vs 9 surrender (6D)" },
     { playerCards: [card("10"), card("6")], dealerUpCard: card("K"), expected: "surrender", category: "Surrender" },
     { playerCards: [card("10"), card("6")], dealerUpCard: card("A"), expected: "surrender", category: "Surrender" },
     { playerCards: [card("10"), card("5")], dealerUpCard: card("10"), expected: "surrender", category: "Surrender" },

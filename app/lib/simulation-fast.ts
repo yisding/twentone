@@ -266,7 +266,7 @@ function getStrategyAction(
 
   // Hard total strategy
   if (canSurrenderHand) {
-    if (total === 16 && dealerUpValue >= 9 && !(dealerUpValue === 9 && !rc.hitSoft17)) {
+    if (total === 16 && dealerUpValue >= 9 && !(dealerUpValue === 9 && rc.decks < 4)) {
       return Action.Surrender;
     }
     if (total === 15 && dealerUpValue === 10) return Action.Surrender;

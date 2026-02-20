@@ -169,7 +169,7 @@ function getHardTotalStrategy(
     if (
       total === 16 &&
       dealerValue >= 9 &&
-      !(dealerValue === 9 && !rules.hitSoft17)
+      !(dealerValue === 9 && rules.decks < 4)
     ) {
       return "surrender";
     }
@@ -387,8 +387,8 @@ function getHardExplanation(
 
   if (action === "surrender") {
     if (total === 16) {
-      if (dealerValue === 9 && rules.hitSoft17) {
-        ruleNotes.push("This surrender vs dealer 9 is only correct with H17 rules. With S17, you should hit instead.");
+      if (dealerValue === 9 && rules.decks >= 4) {
+        ruleNotes.push("Surrendering 16 vs 9 is only correct with 4+ decks. With 1-2 decks, hit instead.");
       }
       return "16 vs dealer 9/10/Ace is a heavy underdog. Surrender saves half your bet instead of likely losing it all.";
     }
@@ -419,8 +419,8 @@ function getHardExplanation(
   }
 
   if (action === "hit") {
-    if (total === 16 && dealerValue === 9 && !rules.hitSoft17 && rules.surrenderAllowed !== "none") {
-      ruleNotes.push("With H17 rules, you would surrender this hand instead of hitting.");
+    if (total === 16 && dealerValue === 9 && rules.decks < 4 && rules.surrenderAllowed !== "none") {
+      ruleNotes.push("With 4+ decks, you would surrender this hand instead of hitting.");
     }
     if (total === 15 && dealerValue === 11 && !rules.hitSoft17 && rules.surrenderAllowed !== "none") {
       ruleNotes.push("With H17 rules, you would surrender this hand instead of hitting.");
