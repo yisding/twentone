@@ -42,6 +42,13 @@ export function getBasicStrategyAction(
   );
 }
 
+function canDoubleByRules(hand: Hand, total: number, rules: HouseRules): boolean {
+  if (hand.cards.length !== 2) return false;
+  if (rules.doubleRestriction === "9-11") return total >= 9 && total <= 11;
+  if (rules.doubleRestriction === "10-11") return total >= 10 && total <= 11;
+  return true;
+}
+
 function getPairStrategy(
   hand: Hand,
   dealerValue: number,
@@ -116,7 +123,7 @@ function getSoftTotalStrategy(
   dealerValue: number,
   rules: HouseRules,
 ): PlayerAction {
-  const canDouble = hand.cards.length === 2;
+  const canDouble = canDoubleByRules(hand, total, rules);
 
   if (total >= 19) {
     if (rules.hitSoft17 && total === 19 && dealerValue === 6 && canDouble) {
@@ -164,6 +171,7 @@ function getHardTotalStrategy(
   canSurrender: boolean,
 ): PlayerAction {
   const isSingleOrDoubleDeck = rules.decks <= 2;
+  const canDouble = canDoubleByRules(hand, total, rules);
 
   if (canSurrender) {
     if (
@@ -193,7 +201,7 @@ function getHardTotalStrategy(
   }
 
   if (total === 11) {
-    if (hand.cards.length === 2) {
+    if (canDouble) {
       if (rules.hitSoft17) return "double";
       if (dealerValue !== 11) return "double";
       if (isSingleOrDoubleDeck) return "double";
@@ -202,12 +210,12 @@ function getHardTotalStrategy(
   }
 
   if (total === 10) {
-    if (dealerValue <= 9 && hand.cards.length === 2) return "double";
+    if (dealerValue <= 9 && canDouble) return "double";
     return "hit";
   }
 
   if (total === 9) {
-    if (dealerValue >= 3 && dealerValue <= 6 && hand.cards.length === 2)
+    if (dealerValue >= 3 && dealerValue <= 6 && canDouble)
       return "double";
     return "hit";
   }
