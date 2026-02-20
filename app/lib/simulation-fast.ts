@@ -266,7 +266,7 @@ function getStrategyAction(
 
   // Hard total strategy
   if (canSurrenderHand) {
-    if (total === 16 && dealerUpValue >= 9 && !(dealerUpValue === 9 && rc.hitSoft17)) {
+    if (total === 16 && dealerUpValue >= 9 && !(dealerUpValue === 9 && !rc.hitSoft17)) {
       return Action.Surrender;
     }
     if (total === 15 && dealerUpValue === 10) return Action.Surrender;
@@ -493,18 +493,10 @@ export function simulateHouseEdge(
         const validated = validateAction(action, hand, numPlayerHands, rc);
 
         if (validated !== action) {
-          // Fallback logic matching simulation.ts behavior
-          if (action === Action.Double && validated === Action.Hit) {
-            // Double not available -> hit then stand
+          if ((action === Action.Double || action === Action.Split) && validated === Action.Hit) {
+            // Double/split not available -> hit and continue playing
             hand.addCard(shoe[deckIdx++]);
-            hand.isStanding = true;
-            break;
-          }
-          if (action === Action.Split && validated === Action.Hit) {
-            // Split not available -> hit then stand
-            hand.addCard(shoe[deckIdx++]);
-            hand.isStanding = true;
-            break;
+            continue;
           }
           // Other fallback: stand
           hand.isStanding = true;
