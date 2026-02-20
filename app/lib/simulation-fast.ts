@@ -226,7 +226,12 @@ function getStrategyAction(
   }
 
   const total = hand.total;
-  const canDouble = hand.cardCount === 2;
+  const canDouble =
+    hand.cardCount === 2 &&
+    (!hand.isSplit || rc.isDAS) &&
+    (rc.doubleRestriction === "any" ||
+      (rc.doubleRestriction === "9-11" && total >= 9 && total <= 11) ||
+      (rc.doubleRestriction === "10-11" && total >= 10 && total <= 11));
 
   // Soft total strategy
   if (hand.isSoft && total <= 21) {
@@ -393,6 +398,14 @@ export function simulateHouseEdge(
   const pool = new HandPool();
   const dealerHand = new SimHand();
 
+  const drawRank = (): number => {
+    if (deckIdx >= shoeSize) {
+      shuffleShoe(shoe);
+      deckIdx = 0;
+    }
+    return shoe[deckIdx++];
+  };
+
   // Accumulator
   let totalBet = 0;
   let totalReturned = 0;
@@ -415,12 +428,12 @@ export function simulateHouseEdge(
     dealerHand.reset();
 
     // Deal initial cards
-    playerHand.addCard(shoe[deckIdx++]);
-    dealerHand.addCard(shoe[deckIdx++]);
-    playerHand.addCard(shoe[deckIdx++]);
+    playerHand.addCard(drawRank());
+    dealerHand.addCard(drawRank());
+    playerHand.addCard(drawRank());
 
     if (!rc.noHoleCard) {
-      dealerHand.addCard(shoe[deckIdx++]);
+      dealerHand.addCard(drawRank());
     }
 
     // Check naturals
@@ -481,12 +494,12 @@ export function simulateHouseEdge(
           newHand1.isSplit = true;
           newHand1.isSplitAces = true;
           newHand1.setFirstCard(card1Rank);
-          newHand1.addCard(shoe[deckIdx++]);
+          newHand1.addCard(drawRank());
 
           newHand2.isSplit = true;
           newHand2.isSplitAces = true;
           newHand2.setFirstCard(card2Rank);
-          newHand2.addCard(shoe[deckIdx++]);
+          newHand2.addCard(drawRank());
 
           numPlayerHands++;
           continue; // re-check current hand (it may be another pair of aces)
@@ -504,7 +517,7 @@ export function simulateHouseEdge(
         if (validated !== action) {
           if ((action === Action.Double || action === Action.Split) && validated === Action.Hit) {
             // Double/split not available -> hit and continue playing
-            hand.addCard(shoe[deckIdx++]);
+            hand.addCard(drawRank());
             continue;
           }
           // Other fallback: stand
@@ -523,12 +536,12 @@ export function simulateHouseEdge(
         }
 
         if (validated === Action.Hit) {
-          hand.addCard(shoe[deckIdx++]);
+          hand.addCard(drawRank());
           continue;
         }
 
         if (validated === Action.Double) {
-          hand.addCard(shoe[deckIdx++]);
+          hand.addCard(drawRank());
           hand.isDoubledDown = true;
           hand.isStanding = true;
           break;
@@ -548,12 +561,12 @@ export function simulateHouseEdge(
           newHand1.isSplit = true;
           newHand1.isSplitAces = isSplittingAces || hand.isSplitAces;
           newHand1.setFirstCard(card1Rank);
-          newHand1.addCard(shoe[deckIdx++]);
+          newHand1.addCard(drawRank());
 
           newHand2.isSplit = true;
           newHand2.isSplitAces = isSplittingAces || hand.isSplitAces;
           newHand2.setFirstCard(card2Rank);
-          newHand2.addCard(shoe[deckIdx++]);
+          newHand2.addCard(drawRank());
 
           numPlayerHands++;
           continue;
@@ -576,7 +589,7 @@ export function simulateHouseEdge(
     if (!allBustedOrSurrendered) {
       // Deal hole card if no-hole-card rule
       if (rc.noHoleCard && dealerHand.cardCount === 1) {
-        dealerHand.addCard(shoe[deckIdx++]);
+        dealerHand.addCard(drawRank());
       }
 
       // Dealer plays
@@ -586,7 +599,7 @@ export function simulateHouseEdge(
         if (dt > 17) break;
         if (dt === 17 && !dealerHand.isSoft) break;
         if (dt === 17 && dealerHand.isSoft && !rc.hitSoft17) break;
-        dealerHand.addCard(shoe[deckIdx++]);
+        dealerHand.addCard(drawRank());
       }
     }
 
