@@ -67,8 +67,13 @@ export function useGameState(
     let newGame = initGame(rules);
     const playerHasBlackjack = isBlackjack(newGame.playerHands[0]);
     const dealerHasBlackjack = !rules.noHoleCard && isBlackjack(newGame.dealerHand);
-    if (dealerHasBlackjack || (playerHasBlackjack && !rules.noHoleCard)) {
-      newGame.phase = "resolved";
+    if (playerHasBlackjack || dealerHasBlackjack) {
+      if (rules.noHoleCard) {
+        // Deal dealer's second card so we can detect BJ push
+        newGame = dealerPlay(newGame, rules);
+      } else {
+        newGame.phase = "resolved";
+      }
     }
     winningsProcessedRef.current = false;
     
