@@ -157,6 +157,19 @@ function simulateHand(deck: Card[], rules: HouseRules): { returned: number; bet:
   const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplit;
   const dealerIsBlackjack = isBlackjack(dealerHand);
 
+  if (
+    !rules.noHoleCard &&
+    rules.surrenderAllowed === "early" &&
+    dealerIsBlackjack &&
+    !playerIsBlackjack
+  ) {
+    const action = getBasicStrategyAction(playerHand, dealerHand, rules);
+    const surrendered = action === "surrender";
+    const bet = 1;
+    const returned = surrendered ? 0.5 : 0;
+    return { returned, bet, deck: currentDeck, surrenders: surrendered ? 1 : 0 };
+  }
+
   if (playerIsBlackjack || dealerIsBlackjack) {
     // Under no hole card rules: only deal one card if dealer shows 10/Ace
     if (rules.noHoleCard && playerIsBlackjack && dealerHand.cards.length === 1) {
