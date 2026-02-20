@@ -16,11 +16,11 @@ export function MistakesLog({ plays, onClear, onRemove }: MistakesLogProps) {
   if (plays.length === 0 && !isOpen) return null;
 
   return (
-    <div className="mt-4 border-t border-zinc-200 pt-4">
+    <div className="mt-4 border-t border-border pt-4">
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+          className="flex items-center gap-2 text-sm font-medium text-foreground/70 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
           aria-expanded={isOpen}
           aria-label={`Mistakes log, ${plays.length} items`}
         >
@@ -53,9 +53,9 @@ function MistakeItem({ play, onRemove }: { play: IncorrectPlay; onRemove: () => 
   const timeAgo = formatTimeAgo(play.timestamp);
 
   return (
-    <div className="flex items-start justify-between p-2 bg-red-50 rounded border border-red-100 text-sm">
+    <div className="flex items-start justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded border border-red-100 dark:border-red-900/40 text-sm">
       <div className="flex-1">
-        <div className="font-medium text-red-800">
+        <div className="font-medium text-red-700 dark:text-red-300">
           {play.handDescription} vs Dealer {play.dealerUpCard.rank}
         </div>
         <div className="text-red-600">
@@ -63,10 +63,10 @@ function MistakeItem({ play, onRemove }: { play: IncorrectPlay; onRemove: () => 
           {" → "}
           Correct: <span className="font-medium">{actionToString(play.expectedAction as PlayerAction)}</span>
         </div>
-        <div className="text-xs text-zinc-600 mt-1 italic">
+        <div className="text-xs text-muted-foreground mt-1 italic">
           {play.explanation}
         </div>
-        <div className="text-xs text-zinc-400 mt-1">{timeAgo}</div>
+        <div className="text-xs text-muted-foreground/60 mt-1">{timeAgo}</div>
       </div>
       <Button variant="ghost" size="sm" onClick={onRemove} className="text-zinc-400 hover:text-zinc-600 p-1 h-auto" aria-label="Remove mistake">
         ✕

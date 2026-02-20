@@ -5,6 +5,8 @@ import { HouseRules, DEFAULT_HOUSE_RULES } from "./lib/types";
 import { generateStrategyTable, type StrategyTable } from "./lib/ev-calculator";
 import { SettingsPanel, StatsBar, GameArea, MistakesLog, TrainingMode } from "./components";
 import { useGameState, useSessionStats, useIncorrectPlays, useTrainingMode } from "./hooks";
+import { useTheme } from "./theme-context";
+import { Sun, Moon } from "lucide-react";
 
 type GameMode = "practice" | "training";
 
@@ -52,8 +54,8 @@ export default function Home() {
       <div className="max-w-4xl mx-auto p-4">
         <Header />
 
-        <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-          <div className="p-4 border-b border-zinc-200">
+        <div className="bg-card rounded-xl shadow-xl overflow-hidden">
+          <div className="p-4 border-b border-border">
             <SettingsPanel
               rules={rules}
               onRulesChange={setRules}
@@ -134,14 +136,14 @@ function ModeSelector({
   onModeChange: (mode: GameMode) => void;
 }) {
   return (
-    <div className="flex border-b border-zinc-200" role="tablist" aria-label="Game mode">
+    <div className="flex border-b border-border" role="tablist" aria-label="Game mode">
       <button
         role="tab"
         aria-selected={currentMode === "practice"}
         onClick={() => onModeChange("practice")}
         className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${currentMode === "practice"
-            ? "bg-zinc-100 text-zinc-900 border-b-2 border-green-600"
-            : "text-zinc-500 hover:text-zinc-700"
+          ? "bg-muted text-foreground border-b-2 border-green-600"
+          : "text-muted-foreground hover:text-foreground"
           }`}
       >
         Practice Mode
@@ -151,8 +153,8 @@ function ModeSelector({
         aria-selected={currentMode === "training"}
         onClick={() => onModeChange("training")}
         className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${currentMode === "training"
-            ? "bg-zinc-100 text-zinc-900 border-b-2 border-green-600"
-            : "text-zinc-500 hover:text-zinc-700"
+          ? "bg-muted text-foreground border-b-2 border-green-600"
+          : "text-muted-foreground hover:text-foreground"
           }`}
       >
         Training Mode
@@ -162,8 +164,16 @@ function ModeSelector({
 }
 
 function Header() {
+  const { theme, toggleTheme } = useTheme();
   return (
-    <header className="text-center mb-6">
+    <header className="text-center mb-6 relative">
+      <button
+        onClick={toggleTheme}
+        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+      >
+        {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+      </button>
       <h1 className="text-3xl font-bold text-white mb-2">
         Blackjack Strategy Trainer
       </h1>
@@ -208,18 +218,18 @@ function TrainingStatsBar({
       : 0;
 
   return (
-    <div className="px-4 py-2 bg-zinc-50 border-b border-zinc-200">
+    <div className="px-4 py-2 bg-muted/50 border-b border-border">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm">
           <div>
-            <span className="text-zinc-500">Session:</span>{" "}
+            <span className="text-muted-foreground">Session:</span>{" "}
             <span className="font-semibold">{sessionStats.correct}/{sessionStats.total}</span>
             {sessionStats.total > 0 && (
-              <span className="ml-1 text-zinc-400">({sessionAccuracy}%)</span>
+              <span className="ml-1 text-muted-foreground/60">({sessionAccuracy}%)</span>
             )}
           </div>
           <div>
-            <span className="text-zinc-500">Overall:</span>{" "}
+            <span className="text-muted-foreground">Overall:</span>{" "}
             <span className="font-semibold">{Math.round(trainingStats.averageAccuracy * 100)}%</span>
           </div>
           {trainingStats.masteredScenarios > 0 && (
@@ -231,7 +241,7 @@ function TrainingStatsBar({
         </div>
         <button
           onClick={onReset}
-          className="text-xs text-zinc-400 hover:text-zinc-600 shrink-0"
+          className="text-xs text-muted-foreground/60 hover:text-muted-foreground shrink-0"
         >
           Reset Progress
         </button>

@@ -65,7 +65,7 @@ export function TrainingMode({
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold mb-4">Training Mode</h2>
-        <p className="text-zinc-600 mb-6">
+        <p className="text-muted-foreground mb-6">
           Focus on the harder parts of basic strategy with spaced repetition.
         </p>
         <Button onClick={onNextScenario} size="lg" className="bg-green-600 hover:bg-green-700">
@@ -128,7 +128,7 @@ export function TrainingMode({
       )}
 
       {weakCategories.length > 0 && !focusCategory && (
-        <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 p-2 rounded">
+        <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
           <span>Needs practice:</span>
           {weakCategories.map((cat) => (
             <Button
@@ -144,21 +144,21 @@ export function TrainingMode({
         </div>
       )}
 
-      <div className="bg-zinc-50 rounded-lg p-6">
-        <div className="text-center mb-2 text-zinc-600 font-medium">
+      <div className="bg-muted/50 rounded-lg p-6">
+        <div className="text-center mb-2 text-muted-foreground font-medium">
           {currentScenario.description}
         </div>
 
         <div className="flex flex-col items-center gap-8">
           <div className="text-center">
-            <div className="text-sm text-zinc-500 mb-2">Dealer</div>
+            <div className="text-sm text-muted-foreground mb-2">Dealer</div>
             <div className="flex justify-center gap-2">
               <Card card={currentScenario.dealerUpCard} />
             </div>
           </div>
 
           <div className="text-center">
-            <div className="text-sm text-zinc-500 mb-2">Your Hand</div>
+            <div className="text-sm text-muted-foreground mb-2">Your Hand</div>
             <div className="flex justify-center gap-2">
               {currentScenario.playerCards.map((card, i) => (
                 <Card key={i} card={card} />
@@ -173,7 +173,7 @@ export function TrainingMode({
 
       {!showAnswer ? (
         <div className="space-y-4">
-          <div className="text-center text-zinc-600">What is the correct play?</div>
+          <div className="text-center text-muted-foreground">What is the correct play?</div>
           <ActionButtons
             actions={availableActions}
             onAction={onSubmitAnswer}
@@ -196,8 +196,8 @@ export function TrainingMode({
             strategyTable={strategyTable}
           />
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">{currentScenario.explanation}</p>
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-lg p-4">
+            <p className="text-sm text-blue-700 dark:text-blue-300">{currentScenario.explanation}</p>
           </div>
 
           {currentScenario.rulesVariants && currentScenario.rulesVariants.length > 0 && (
@@ -332,8 +332,8 @@ function FeedbackMessage({
           <div className={cn(
             "inline-block rounded-lg px-3 py-2 max-w-full overflow-hidden",
             isCorrect
-              ? "bg-green-50 border border-green-200"
-              : "bg-red-50 border border-red-200"
+              ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/40"
+              : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40"
           )}>
             <div className="flex items-center gap-2 text-sm flex-wrap justify-center">
               {actionEVs.map((a, i) => (
@@ -341,10 +341,10 @@ function FeedbackMessage({
                   {i > 0 && <span className="text-zinc-400">|</span>}
                   <span className={cn(
                     a.action === (expectedAction ?? chosenAction)
-                      ? isCorrect ? "text-green-700 font-medium" : "text-red-700 font-medium"
+                      ? isCorrect ? "text-green-600 dark:text-green-400 font-medium" : "text-red-600 dark:text-red-400 font-medium"
                       : a.action === chosenAction && !isCorrect
-                        ? "text-zinc-600 font-medium"
-                        : "text-zinc-500"
+                        ? "text-foreground/70 font-medium"
+                        : "text-muted-foreground"
                   )}>
                     {actionToString(a.action)}: {formatEV(a.ev)}
                   </span>
@@ -352,7 +352,7 @@ function FeedbackMessage({
               ))}
             </div>
             {!isCorrect && evCost && (
-              <div className="mt-1 text-xs text-red-600 font-medium">
+              <div className="mt-1 text-xs text-red-500 dark:text-red-400 font-medium">
                 Cost: {formatEVLoss(evCost.evLoss)} of your bet
               </div>
             )}
@@ -369,8 +369,8 @@ function RulesetNote({
   rules: HouseRules;
 }) {
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-      <p className="text-xs text-amber-800">
+    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-lg p-3">
+      <p className="text-xs text-amber-700 dark:text-amber-300">
         <strong>Note:</strong> This scenario has ruleset variations. The correct
         play depends on your current rules (H17: {rules.hitSoft17 ? "Yes" : "No"},
         DAS: {rules.doubleAfterSplit ? "Yes" : "No"}, Decks: {rules.decks}).
@@ -405,7 +405,7 @@ function CategorySelector({
   ];
 
   return (
-    <div className="bg-white border rounded-lg p-4 space-y-2">
+    <div className="bg-card border border-border rounded-lg p-4 space-y-2">
       <div className="flex items-center justify-between mb-2">
         <span className="font-medium">Focus on Category</span>
         <Button variant="ghost" size="sm" onClick={onClose}>
@@ -429,8 +429,8 @@ function CategorySelector({
               className={cn(
                 "text-left p-3 rounded border transition-colors",
                 focusCategory === cat
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-zinc-200 hover:border-zinc-300"
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
+                  : "border-border hover:border-border/80"
               )}
             >
               <div className="flex items-center gap-2">
@@ -443,7 +443,7 @@ function CategorySelector({
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {CATEGORY_DESCRIPTIONS[cat]}
               </p>
               {stats.total > 0 && (

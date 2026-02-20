@@ -10,8 +10,8 @@ const SUIT_SYMBOLS: Record<string, string> = {
 const SUIT_COLORS: Record<string, string> = {
   hearts: "text-red-600",
   diamonds: "text-red-600",
-  clubs: "text-zinc-900",
-  spades: "text-zinc-900",
+  clubs: "text-foreground",
+  spades: "text-foreground",
 };
 
 interface CardProps {
@@ -29,7 +29,7 @@ export function Card({ card, hidden = false }: CardProps) {
   }
 
   return (
-    <div className="w-14 h-20 sm:w-16 sm:h-24 bg-white rounded-lg border-2 border-zinc-300 flex flex-col items-center justify-center shadow-md" role="img" aria-label={`${card.rank} of ${card.suit}`}>
+    <div className="w-14 h-20 sm:w-16 sm:h-24 bg-card rounded-lg border-2 border-border flex flex-col items-center justify-center shadow-md" role="img" aria-label={`${card.rank} of ${card.suit}`}>
       <span className={`text-base sm:text-lg font-bold ${SUIT_COLORS[card.suit]}`} aria-hidden="true">
         {card.rank}
       </span>
