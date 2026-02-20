@@ -2,41 +2,173 @@ import { Hand, HouseRules, PlayerAction } from "./types";
 import { calculateHandValue, getCardValue, getDealerUpCard } from "./deck";
 import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
 import type { StrategyTable, StrategyEntry } from "./ev-calculator";
-import { getBasicStrategyAction } from "./strategy";
 
-const currentProbs = INFINITE_DECK_PROBS.slice();
+// =========================================================================
+// Infinite-deck helpers (fixed probabilities, used when decks < 1 or > 8)
+// =========================================================================
 
-const dealerMemo = new Map<string, Float64Array>();
+const infProbs = INFINITE_DECK_PROBS.slice();
 
-function computeDealerDist(dealerUpcard: number, hitSoft17: boolean): Float64Array {
-  const key = `${dealerUpcard}-${hitSoft17}`;
-  const cached = dealerMemo.get(key);
+const infDealerMemo = new Map<string, Float64Array>();
+
+function infDealerRec(total: number, isSoft: boolean, hitSoft17: boolean): Float64Array {
+  if (total > 21) {
+    const d = new Float64Array(6);
+    d[5] = 1;
+    return d;
+  }
+  const mustStand = total > 17 || (total === 17 && !(isSoft && hitSoft17));
+  if (mustStand) {
+    const d = new Float64Array(6);
+    d[total - 17] = 1;
+    return d;
+  }
+  const key = `${total}-${isSoft}-${hitSoft17}`;
+  const cached = infDealerMemo.get(key);
+  if (cached) return cached;
+
+  const d = new Float64Array(6);
+  for (let i = 0; i < N; i++) {
+    const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
+    const sub = infDealerRec(nt, ns, hitSoft17);
+    for (let j = 0; j < 6; j++) d[j] += infProbs[i] * sub[j];
+  }
+  infDealerMemo.set(key, d);
+  return d;
+}
+
+function infDealerDist(upcard: number, hitSoft17: boolean): Float64Array {
+  const key = `dist-${upcard}-${hitSoft17}`;
+  const cached = infDealerMemo.get(key);
   if (cached) return cached;
 
   const dist = new Float64Array(6);
-
   for (let i = 0; i < N; i++) {
-    const holeCard = CARD_VALUES[i];
-    const [t1, s1] = addCard(dealerUpcard, dealerUpcard === 11, holeCard);
-    const sub = dealerRec(t1, s1, hitSoft17);
-    for (let j = 0; j < 6; j++) dist[j] += currentProbs[i] * sub[j];
+    const hc = CARD_VALUES[i];
+    const [t1, s1] = addCard(upcard, upcard === 11, hc);
+    const sub = infDealerRec(t1, s1, hitSoft17);
+    for (let j = 0; j < 6; j++) dist[j] += infProbs[i] * sub[j];
   }
 
   // Condition on no dealer blackjack (peek game)
   let bjProb = 0;
-  if (dealerUpcard === 11) bjProb = currentProbs[8]; // Ace up, 10-value hole
-  else if (dealerUpcard === 10) bjProb = currentProbs[9]; // 10 up, Ace hole
+  if (upcard === 11) bjProb = infProbs[8];
+  else if (upcard === 10) bjProb = infProbs[9];
   if (bjProb > 0) {
-    dist[4] -= bjProb; // remove BJ from 21 bucket (index 4 = total 21)
+    dist[4] -= bjProb;
     const scale = 1 / (1 - bjProb);
     for (let j = 0; j < 6; j++) dist[j] *= scale;
   }
 
-  dealerMemo.set(key, dist);
+  infDealerMemo.set(key, dist);
   return dist;
 }
 
-function dealerRec(total: number, isSoft: boolean, hitSoft17: boolean): Float64Array {
+function evStand(playerTotal: number, dd: Float64Array): number {
+  if (playerTotal > 21) return -1;
+  let ev = dd[5]; // dealer busts → win
+  for (let dt = 17; dt <= 21; dt++) {
+    const dp = dd[dt - 17];
+    if (playerTotal > dt) ev += dp;
+    else if (playerTotal < dt) ev -= dp;
+  }
+  return ev;
+}
+
+const infHitMemo = new Map<string, number>();
+
+function infHitEV(total: number, isSoft: boolean, dd: Float64Array, ddKey: string): number {
+  const key = `${total}-${isSoft}-${ddKey}`;
+  const cached = infHitMemo.get(key);
+  if (cached !== undefined) return cached;
+
+  let ev = 0;
+  for (let i = 0; i < N; i++) {
+    const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
+    if (nt > 21) {
+      ev += infProbs[i] * (-1);
+    } else {
+      const sEV = evStand(nt, dd);
+      const hEV = infHitEV(nt, ns, dd, ddKey);
+      ev += infProbs[i] * Math.max(sEV, hEV);
+    }
+  }
+
+  infHitMemo.set(key, ev);
+  return ev;
+}
+
+function infDoubleEV(total: number, isSoft: boolean, dd: Float64Array): number {
+  let ev = 0;
+  for (let i = 0; i < N; i++) {
+    const [nt] = addCard(total, isSoft, CARD_VALUES[i]);
+    ev += infProbs[i] * (nt > 21 ? -1 : evStand(nt, dd));
+  }
+  return ev * 2;
+}
+
+const infOptMemo = new Map<string, number>();
+
+function infOptimalEV(total: number, isSoft: boolean, dd: Float64Array, ddKey: string, rules: HouseRules, canDbl: boolean): number {
+  if (total > 21) return -1;
+  const key = `${total}-${isSoft}-${ddKey}-${canDbl}`;
+  const cached = infOptMemo.get(key);
+  if (cached !== undefined) return cached;
+
+  let best = evStand(total, dd);
+  const hEV = infHitEV(total, isSoft, dd, ddKey);
+  if (hEV > best) best = hEV;
+
+  if (canDbl) {
+    let allowed = true;
+    if (rules.doubleRestriction === "9-11") allowed = total >= 9 && total <= 11;
+    else if (rules.doubleRestriction === "10-11") allowed = total >= 10 && total <= 11;
+    if (allowed) {
+      const dEV = infDoubleEV(total, isSoft, dd);
+      if (dEV > best) best = dEV;
+    }
+  }
+
+  infOptMemo.set(key, best);
+  return best;
+}
+
+function infSplitHandEV(card: number, resplitsLeft: number, isAces: boolean, dd: Float64Array, ddKey: string, rules: HouseRules): number {
+  let ev = 0;
+  const canDAS = !isAces && rules.doubleAfterSplit;
+  for (let i = 0; i < N; i++) {
+    const c2 = CARD_VALUES[i];
+    const [total, soft] = addCard(card, card === 11, c2);
+    const canRS = c2 === card && resplitsLeft > 0 && (!isAces || rules.resplitAces);
+
+    if (isAces && !canRS) {
+      ev += infProbs[i] * evStand(total, dd);
+    } else if (canRS) {
+      const playEV = infOptimalEV(total, soft, dd, ddKey, rules, canDAS);
+      const rsEV = 2 * infSplitHandEV(card, resplitsLeft - 1, isAces, dd, ddKey, rules);
+      ev += infProbs[i] * Math.max(playEV, rsEV);
+    } else {
+      ev += infProbs[i] * infOptimalEV(total, soft, dd, ddKey, rules, canDAS);
+    }
+  }
+  return ev;
+}
+
+function infSplitEV(cardValue: number, dd: Float64Array, ddKey: string, rules: HouseRules): number {
+  return 2 * infSplitHandEV(cardValue, rules.maxSplitHands - 2, cardValue === 11, dd, ddKey, rules);
+}
+
+// =========================================================================
+// Composition-dependent (CD) helpers — track shoe through every draw
+// =========================================================================
+
+function shoeKey(s: number[]): string {
+  return `${s[0]}.${s[1]}.${s[2]}.${s[3]}.${s[4]}.${s[5]}.${s[6]}.${s[7]}.${s[8]}.${s[9]}`;
+}
+
+const cdDealerMemo = new Map<string, Float64Array>();
+
+function cdDealerRec(total: number, isSoft: boolean, hitSoft17: boolean, shoe: number[], st: number): Float64Array {
   if (total > 21) {
     const d = new Float64Array(6);
     d[5] = 1;
@@ -49,160 +181,158 @@ function dealerRec(total: number, isSoft: boolean, hitSoft17: boolean): Float64A
     return d;
   }
 
-  const key = `${total}-${isSoft}-${hitSoft17}`;
-  const cached = dealerMemo.get(key);
+  const key = `${total * 2 + (isSoft ? 1 : 0)}|${shoeKey(shoe)}`;
+  const cached = cdDealerMemo.get(key);
   if (cached) return cached;
 
   const d = new Float64Array(6);
   for (let i = 0; i < N; i++) {
+    if (shoe[i] === 0) continue;
+    const p = shoe[i] / st;
     const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
-    const sub = dealerRec(nt, ns, hitSoft17);
-    for (let j = 0; j < 6; j++) d[j] += currentProbs[i] * sub[j];
+    shoe[i]--;
+    const sub = cdDealerRec(nt, ns, hitSoft17, shoe, st - 1);
+    shoe[i]++;
+    for (let j = 0; j < 6; j++) d[j] += p * sub[j];
   }
 
-  dealerMemo.set(key, d);
+  cdDealerMemo.set(key, d);
   return d;
 }
 
-function computeStandEV(total: number, dealerUpcard: number, hitSoft17: boolean): number {
-  if (total > 21) return -1;
-  const dd = computeDealerDist(dealerUpcard, hitSoft17);
-  let ev = dd[5];
-  for (let dt = 17; dt <= 21; dt++) {
-    const dp = dd[dt - 17];
-    if (total > dt) ev += dp;
-    else if (total < dt) ev -= dp;
+function cdDealerDist(upcard: number, hitSoft17: boolean, shoe: number[], st: number): Float64Array {
+  cdDealerMemo.clear();
+
+  const dist = new Float64Array(6);
+  for (let i = 0; i < N; i++) {
+    if (shoe[i] === 0) continue;
+    const pH = shoe[i] / st;
+    const hc = CARD_VALUES[i];
+    const [t1, s1] = addCard(upcard, upcard === 11, hc);
+    shoe[i]--;
+    const sub = cdDealerRec(t1, s1, hitSoft17, shoe, st - 1);
+    shoe[i]++;
+    for (let j = 0; j < 6; j++) dist[j] += pH * sub[j];
   }
-  return ev;
+
+  // Condition on no dealer blackjack (peek game)
+  let bjProb = 0;
+  if (upcard === 11 && shoe[8] > 0) bjProb = shoe[8] / st;
+  else if (upcard === 10 && shoe[9] > 0) bjProb = shoe[9] / st;
+  if (bjProb > 0) {
+    dist[4] -= bjProb;
+    const scale = 1 / (1 - bjProb);
+    for (let j = 0; j < 6; j++) dist[j] *= scale;
+  }
+
+  return dist;
 }
 
-const hitMemo = new Map<string, number>();
+const cdHitMemo = new Map<string, number>();
 
-function computeHitEV(total: number, isSoft: boolean, dealerUpcard: number, hitSoft17: boolean): number {
-  const key = `${total}-${isSoft}-${dealerUpcard}-${hitSoft17}`;
-  const cached = hitMemo.get(key);
+function cdHitEV(total: number, isSoft: boolean, dd: Float64Array, shoe: number[], st: number): number {
+  const hk = total * 2 + (isSoft ? 1 : 0);
+  const key = `${hk}|${shoeKey(shoe)}`;
+  const cached = cdHitMemo.get(key);
   if (cached !== undefined) return cached;
 
   let ev = 0;
   for (let i = 0; i < N; i++) {
+    if (shoe[i] === 0) continue;
+    const p = shoe[i] / st;
     const [nt, ns] = addCard(total, isSoft, CARD_VALUES[i]);
     if (nt > 21) {
-      ev += currentProbs[i] * (-1);
+      ev += p * (-1);
     } else {
-      const standEV = computeStandEV(nt, dealerUpcard, hitSoft17);
-      const hitAgainEV = computeHitEV(nt, ns, dealerUpcard, hitSoft17);
-      ev += currentProbs[i] * Math.max(standEV, hitAgainEV);
+      shoe[i]--;
+      const sEV = evStand(nt, dd);
+      const hEV = cdHitEV(nt, ns, dd, shoe, st - 1);
+      shoe[i]++;
+      ev += p * Math.max(sEV, hEV);
     }
   }
 
-  hitMemo.set(key, ev);
+  cdHitMemo.set(key, ev);
   return ev;
 }
 
-function computeDoubleEV(total: number, isSoft: boolean, dealerUpcard: number, hitSoft17: boolean): number {
+function cdDoubleEV(total: number, isSoft: boolean, dd: Float64Array, shoe: number[], st: number): number {
   let ev = 0;
   for (let i = 0; i < N; i++) {
+    if (shoe[i] === 0) continue;
+    const p = shoe[i] / st;
     const [nt] = addCard(total, isSoft, CARD_VALUES[i]);
-    ev += currentProbs[i] * (nt > 21 ? -1 : computeStandEV(nt, dealerUpcard, hitSoft17));
+    ev += p * (nt > 21 ? -1 : evStand(nt, dd));
   }
   return ev * 2;
 }
 
-function computeSplitEV(cardValue: number, dealerUpcard: number, rules: HouseRules): number {
-  const isAces = cardValue === 11;
-  return 2 * splitHandEV(cardValue, rules.maxSplitHands - 2, isAces, dealerUpcard, rules);
+const cdOptMemo = new Map<string, number>();
+
+function cdOptimalEV(total: number, isSoft: boolean, dd: Float64Array, shoe: number[], st: number, rules: HouseRules, canDbl: boolean): number {
+  if (total > 21) return -1;
+  const hk = (total << 1) | (isSoft ? 1 : 0);
+  const key = `${hk}-${canDbl ? 1 : 0}|${shoeKey(shoe)}`;
+  const cached = cdOptMemo.get(key);
+  if (cached !== undefined) return cached;
+
+  let best = evStand(total, dd);
+  const hEV = cdHitEV(total, isSoft, dd, shoe, st);
+  if (hEV > best) best = hEV;
+
+  if (canDbl) {
+    let allowed = true;
+    if (rules.doubleRestriction === "9-11") allowed = total >= 9 && total <= 11;
+    else if (rules.doubleRestriction === "10-11") allowed = total >= 10 && total <= 11;
+    if (allowed) {
+      const dEV = cdDoubleEV(total, isSoft, dd, shoe, st);
+      if (dEV > best) best = dEV;
+    }
+  }
+
+  cdOptMemo.set(key, best);
+  return best;
 }
 
-function splitHandEV(
-  card: number,
-  resplitsLeft: number,
-  isAces: boolean,
-  dealerUpcard: number,
-  rules: HouseRules,
-): number {
+function cdSplitHandEV(card: number, resplitsLeft: number, isAces: boolean, dd: Float64Array, shoe: number[], st: number, rules: HouseRules): number {
   let ev = 0;
   const canDAS = !isAces && rules.doubleAfterSplit;
   for (let i = 0; i < N; i++) {
-    const secondCard = CARD_VALUES[i];
-    const [total, soft] = addCard(card, card === 11, secondCard);
-    const canResplit = secondCard === card && resplitsLeft > 0 && (!isAces || rules.resplitAces);
+    if (shoe[i] === 0) continue;
+    const c2 = CARD_VALUES[i];
+    const p = shoe[i] / st;
+    const [total, soft] = addCard(card, card === 11, c2);
+    const canRS = c2 === card && resplitsLeft > 0 && (!isAces || rules.resplitAces);
 
-    if (isAces && !canResplit) {
-      ev += currentProbs[i] * computeStandEV(total, dealerUpcard, rules.hitSoft17);
-    } else if (canResplit) {
-      const playEV = computeOptimalEV(total, soft, dealerUpcard, rules, canDAS);
-      const resplitEV = 2 * splitHandEV(card, resplitsLeft - 1, isAces, dealerUpcard, rules);
-      ev += currentProbs[i] * Math.max(playEV, resplitEV);
+    shoe[i]--;
+    if (isAces && !canRS) {
+      ev += p * evStand(total, dd);
+    } else if (canRS) {
+      const playEV = cdOptimalEV(total, soft, dd, shoe, st - 1, rules, canDAS);
+      const rsEV = 2 * cdSplitHandEV(card, resplitsLeft - 1, isAces, dd, shoe, st - 1, rules);
+      ev += p * Math.max(playEV, rsEV);
     } else {
-      ev += currentProbs[i] * computeOptimalEV(total, soft, dealerUpcard, rules, canDAS);
+      ev += p * cdOptimalEV(total, soft, dd, shoe, st - 1, rules, canDAS);
     }
+    shoe[i]++;
   }
   return ev;
 }
 
-const optimalMemo = new Map<string, number>();
-
-function computeOptimalEV(total: number, isSoft: boolean, dealerUpcard: number, rules: HouseRules, canDoubleDown: boolean = false): number {
-  if (total > 21) return -1;
-  const key = `${total}-${isSoft}-${dealerUpcard}-${rules.hitSoft17}-${canDoubleDown}`;
-  const cached = optimalMemo.get(key);
-  if (cached !== undefined) return cached;
-
-  let best = computeStandEV(total, dealerUpcard, rules.hitSoft17);
-  const hitEV = computeHitEV(total, isSoft, dealerUpcard, rules.hitSoft17);
-  if (hitEV > best) best = hitEV;
-
-  if (canDoubleDown) {
-    let dblAllowed = true;
-    if (rules.doubleRestriction === "9-11") dblAllowed = total >= 9 && total <= 11;
-    else if (rules.doubleRestriction === "10-11") dblAllowed = total >= 10 && total <= 11;
-    if (dblAllowed) {
-      const dblEV = computeDoubleEV(total, isSoft, dealerUpcard, rules.hitSoft17);
-      if (dblEV > best) best = dblEV;
-    }
-  }
-
-  optimalMemo.set(key, best);
-  return best;
+function cdSplitEV(cardValue: number, dd: Float64Array, shoe: number[], st: number, rules: HouseRules): number {
+  return 2 * cdSplitHandEV(cardValue, rules.maxSplitHands - 2, cardValue === 11, dd, shoe, st, rules);
 }
 
-function setProbs(rules: HouseRules, playerHand: Hand, dealerHand: Hand): void {
-  dealerMemo.clear();
-  hitMemo.clear();
-  optimalMemo.clear();
+// =========================================================================
+// Shoe setup
+// =========================================================================
 
-  if (rules.decks < 1 || rules.decks > 8) {
-    // Infinite deck
-    for (let i = 0; i < N; i++) currentProbs[i] = INFINITE_DECK_PROBS[i];
-    return;
-  }
-
-  // Build shoe counts per card value
-  const counts = new Float64Array(N);
-  const decks = rules.decks;
-  for (let i = 0; i < N; i++) {
-    counts[i] = i === 8 ? 16 * decks : 4 * decks;
-  }
-
-  // Remove player cards and dealer upcard
-  const cardsToRemove = [...playerHand.cards];
-  const upCard = getDealerUpCard(dealerHand);
-  if (upCard) cardsToRemove.push(upCard);
-
-  for (const card of cardsToRemove) {
-    const idx = getCardValue(card) - 2;
-    counts[idx] = Math.max(0, counts[idx] - 1);
-  }
-
-  // Convert to probabilities
-  let totalCards = 0;
-  for (let i = 0; i < N; i++) totalCards += counts[i];
-
-  if (totalCards === 0) {
-    for (let i = 0; i < N; i++) currentProbs[i] = INFINITE_DECK_PROBS[i];
-  } else {
-    for (let i = 0; i < N; i++) currentProbs[i] = counts[i] / totalCards;
-  }
+function makeShoe(decks: number): number[] {
+  const shoe = new Array(N);
+  for (let i = 0; i < 8; i++) shoe[i] = 4 * decks;
+  shoe[8] = 16 * decks;
+  shoe[9] = 4 * decks;
+  return shoe;
 }
 
 function canDouble(total: number, rules: HouseRules): boolean {
@@ -210,6 +340,10 @@ function canDouble(total: number, rules: HouseRules): boolean {
   if (rules.doubleRestriction === "10-11") return total >= 10 && total <= 11;
   return true;
 }
+
+// =========================================================================
+// Public API
+// =========================================================================
 
 export interface ActionEV {
   action: PlayerAction;
@@ -222,38 +356,84 @@ export function computeActionEVs(
   dealerHand: Hand,
   rules: HouseRules,
 ): ActionEV[] {
-  setProbs(rules, playerHand, dealerHand);
   const { total, isSoft } = calculateHandValue(playerHand);
   const dealerUpCard = getDealerUpCard(dealerHand);
   if (!dealerUpCard) return [];
 
   const dealerValue = getCardValue(dealerUpCard);
-  const isPair = playerHand.cards.length === 2 && 
+  const isPair = playerHand.cards.length === 2 &&
                  playerHand.cards[0].rank === playerHand.cards[1].rank;
   const pairValue = isPair ? getCardValue(playerHand.cards[0]) : null;
-
-  const results: ActionEV[] = [];
-
-  const standEV = computeStandEV(total, dealerValue, rules.hitSoft17);
-  results.push({ action: "stand", ev: standEV, isAvailable: true });
-
-  const hitEV = computeHitEV(total, isSoft, dealerValue, rules.hitSoft17);
-  results.push({ action: "hit", ev: hitEV, isAvailable: true });
-
   const isTwoCardHand = playerHand.cards.length === 2;
   const dblAllowed =
     isTwoCardHand &&
     canDouble(total, rules) &&
     (!playerHand.isSplit || rules.doubleAfterSplit);
-  const dblEV = dblAllowed ? computeDoubleEV(total, isSoft, dealerValue, rules.hitSoft17) : 0;
-  results.push({ action: "double", ev: dblEV, isAvailable: dblAllowed });
-
   const splitAllowed = isPair && rules.maxSplitHands >= 2 && !playerHand.isSplit;
-  const splitEV =
-    splitAllowed && pairValue !== null ? computeSplitEV(pairValue, dealerValue, rules) : 0;
-  results.push({ action: "split", ev: splitEV, isAvailable: splitAllowed });
-
   const surrAllowed = rules.surrenderAllowed !== "none" && isTwoCardHand && !playerHand.isSplit;
+
+  const useCD = Number.isInteger(rules.decks) && rules.decks >= 1 && rules.decks <= 8;
+
+  let standEV: number;
+  let hitEV: number;
+  let dblEV = 0;
+  let splitEv = 0;
+
+  if (useCD) {
+    // Composition-dependent: track shoe through every draw
+    const shoe = makeShoe(rules.decks);
+    const totalCards = rules.decks * 52;
+
+    // Remove known cards (player cards + dealer upcard)
+    for (const card of playerHand.cards) {
+      const idx = getCardValue(card) - 2;
+      shoe[idx] = Math.max(0, shoe[idx] - 1);
+    }
+    const uIdx = dealerValue - 2;
+    shoe[uIdx] = Math.max(0, shoe[uIdx] - 1);
+    const st = totalCards - playerHand.cards.length - 1;
+
+    // Clear CD memos
+    cdDealerMemo.clear();
+    cdHitMemo.clear();
+    cdOptMemo.clear();
+
+    // Build dealer distribution with shoe tracking
+    const dd = cdDealerDist(dealerValue, rules.hitSoft17, shoe, st);
+
+    // Player EVs with shoe tracking
+    standEV = evStand(total, dd);
+    hitEV = cdHitEV(total, isSoft, dd, shoe, st);
+    if (dblAllowed) {
+      dblEV = cdDoubleEV(total, isSoft, dd, shoe, st);
+    }
+    if (splitAllowed && pairValue !== null) {
+      splitEv = cdSplitEV(pairValue, dd, shoe, st, rules);
+    }
+  } else {
+    // Infinite deck: fixed probabilities
+    infDealerMemo.clear();
+    infHitMemo.clear();
+    infOptMemo.clear();
+
+    const dd = infDealerDist(dealerValue, rules.hitSoft17);
+    const ddKey = `${dealerValue}-${rules.hitSoft17}`;
+
+    standEV = evStand(total, dd);
+    hitEV = infHitEV(total, isSoft, dd, ddKey);
+    if (dblAllowed) {
+      dblEV = infDoubleEV(total, isSoft, dd);
+    }
+    if (splitAllowed && pairValue !== null) {
+      splitEv = infSplitEV(pairValue, dd, ddKey, rules);
+    }
+  }
+
+  const results: ActionEV[] = [];
+  results.push({ action: "stand", ev: standEV, isAvailable: true });
+  results.push({ action: "hit", ev: hitEV, isAvailable: true });
+  results.push({ action: "double", ev: dblEV, isAvailable: dblAllowed });
+  results.push({ action: "split", ev: splitEv, isAvailable: splitAllowed });
   results.push({ action: "surrender", ev: -0.5, isAvailable: surrAllowed });
 
   return results;
@@ -286,34 +466,20 @@ export function computeAvailableActionEVs(
 ): ActionEV[] {
   const available = computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
 
-  // For pairs, always use the strategy table's composition-dependent EVs
-  // (more precise than the fixed-probability method in computeActionEVs).
-  // For soft/hard hands, the per-hand EVs can mis-order borderline decisions
-  // (e.g. soft 17 vs 2 in 2-deck) because removing player cards from the shoe
-  // shifts probabilities enough to flip near-equal EVs. When the per-hand best
-  // action disagrees with basic strategy, use the strategy table EVs instead.
+  // For pairs with a strategy table, use the strategy table's EVs which are
+  // computed with full composition-dependent tracking from the strategy table
+  // generation pass. This ensures pair EVs are consistent with the strategy
+  // table's split/no-split recommendations.
   if (strategyTable && playerHand.cards.length === 2) {
-    const dealerUpCard = getDealerUpCard(dealerHand);
-    if (dealerUpCard) {
-      const dealerValue = getCardValue(dealerUpCard);
-      const isPair = playerHand.cards[0].rank === playerHand.cards[1].rank;
-
-      if (isPair) {
+    const isPair = playerHand.cards[0].rank === playerHand.cards[1].rank;
+    if (isPair) {
+      const dealerUpCard = getDealerUpCard(dealerHand);
+      if (dealerUpCard) {
         const pairValue = getCardValue(playerHand.cards[0]);
+        const dealerValue = getCardValue(dealerUpCard);
         const entry = strategyTable.pairs.get(pairValue)?.get(dealerValue);
         if (entry?.evs) {
           applyTableEvs(available, entry.evs);
-        }
-      } else {
-        const perHandBest = available.reduce((a, b) => b.ev > a.ev ? b : a);
-        const strategyAction = getBasicStrategyAction(playerHand, dealerHand, rules);
-        if (perHandBest.action !== strategyAction) {
-          const { total, isSoft } = calculateHandValue(playerHand);
-          const tableMap = isSoft ? strategyTable.soft : strategyTable.hard;
-          const entry = tableMap.get(total)?.get(dealerValue);
-          if (entry?.evs) {
-            applyTableEvs(available, entry.evs);
-          }
         }
       }
     }
