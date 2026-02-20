@@ -17,7 +17,9 @@ export function getBasicStrategyAction(
 
   const dealerValue = getCardValue(dealerUpCard);
   const canSurrender =
-    rules.surrenderAllowed !== "none" && playerHand.cards.length === 2;
+    rules.surrenderAllowed !== "none" &&
+    playerHand.cards.length === 2 &&
+    !playerHand.isSplit;
 
   if (isPair(playerHand) && playerHand.cards.length === 2) {
     const pairAction = getPairStrategy(
@@ -44,6 +46,7 @@ export function getBasicStrategyAction(
 
 function canDoubleByRules(hand: Hand, total: number, rules: HouseRules): boolean {
   if (hand.cards.length !== 2) return false;
+  if (hand.isSplit && !rules.doubleAfterSplit) return false;
   if (rules.doubleRestriction === "9-11") return total >= 9 && total <= 11;
   if (rules.doubleRestriction === "10-11") return total >= 10 && total <= 11;
   return true;
@@ -95,7 +98,7 @@ function getPairStrategy(
   }
 
   if (pairValue === 5) {
-    if (dealerValue <= 9 && hand.cards.length === 2) return "double";
+    if (dealerValue <= 9 && canDoubleByRules(hand, 10, rules)) return "double";
     return "hit";
   }
 

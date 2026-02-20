@@ -1,11 +1,12 @@
 import { getBasicStrategyAction } from "../app/lib/strategy";
 import { Hand, HouseRules, DEFAULT_HOUSE_RULES, Card } from "../app/lib/types";
-import { createEmptyHand } from "../app/lib/game";
+import { createEmptyHand, getHandResult } from "../app/lib/game";
 
-function createHand(cards: Card[]): Hand {
+function createHand(cards: Card[], overrides: Partial<Hand> = {}): Hand {
   return {
     ...createEmptyHand(),
     cards,
+    ...overrides,
   };
 }
 
@@ -18,6 +19,7 @@ interface TestCase {
   dealerUpCard: Card;
   expected: string;
   category: string;
+  playerOverrides?: Partial<Hand>;
 }
 
 const S17_RULES: HouseRules = {
@@ -73,7 +75,7 @@ function runTestSuite(
   console.log(`Testing ${name}:\n`);
 
   for (const tc of testCases) {
-    const playerHand = createHand(tc.playerCards);
+    const playerHand = createHand(tc.playerCards, tc.playerOverrides);
     const dealerHand = createHand([tc.dealerUpCard, card("2")]);
     const actual = getBasicStrategyAction(playerHand, dealerHand, rules);
 
@@ -256,12 +258,44 @@ function runComparison() {
     { playerCards: [card("A"), card("7")], dealerUpCard: card("6"), expected: "stand", category: "Double 9-11 only - Soft 18 vs 6 stand" },
   ];
 
+  const splitHandRestrictionsTestCases: TestCase[] = [
+    {
+      playerCards: [card("10"), card("6")],
+      dealerUpCard: card("10"),
+      expected: "hit",
+      category: "Split hand - never surrender after split",
+      playerOverrides: { isSplit: true },
+    },
+    {
+      playerCards: [card("5"), card("5")],
+      dealerUpCard: card("6"),
+      expected: "hit",
+      category: "Split hand - no DAS means no double",
+      playerOverrides: { isSplit: true },
+    },
+  ];
+
   allDiscrepancies.push(...runTestSuite("Double 9-11 only rules", double9to11TestCases, DOUBLE_9_11_ONLY_RULES));
+
+  allDiscrepancies.push(
+    ...runTestSuite(
+      "Split-hand action restrictions",
+      splitHandRestrictionsTestCases,
+      { ...DEFAULT_HOUSE_RULES, surrenderAllowed: "late", doubleAfterSplit: false, doubleRestriction: "9-11" },
+    ),
+  );
 
   return allDiscrepancies;
 }
 
 const discrepancies = runComparison();
+
+const splitTwentyOne = createHand([card("K"), card("A")], { isSplit: true });
+const dealerNineteen = createHand([card("10"), card("9")]);
+const splitResult = getHandResult(splitTwentyOne, dealerNineteen);
+if (splitResult !== "win") {
+  discrepancies.push(`Split 21 payout check failed - Expected: win, Got: ${splitResult}`);
+}
 
 if (discrepancies.length === 0) {
   console.log("\nAll tests passed! Strategy matches Wizard of Odds.");
