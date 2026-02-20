@@ -1,7 +1,8 @@
 import { Hand, HouseRules, PlayerAction } from "./types";
 import { calculateHandValue, getCardValue, getDealerUpCard } from "./deck";
 import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
-import type { StrategyTable } from "./ev-calculator";
+import type { StrategyTable, StrategyEntry } from "./ev-calculator";
+import { getBasicStrategyAction } from "./strategy";
 
 const currentProbs = INFINITE_DECK_PROBS.slice();
 
@@ -267,6 +268,16 @@ export interface EVCostInfo {
   evLossPercent: string;
 }
 
+function applyTableEvs(available: ActionEV[], tableEvs: NonNullable<StrategyEntry["evs"]>): void {
+  for (const a of available) {
+    if (a.action === "stand") a.ev = tableEvs.stand;
+    else if (a.action === "hit") a.ev = tableEvs.hit;
+    else if (a.action === "double" && tableEvs.double !== undefined) a.ev = tableEvs.double;
+    else if (a.action === "split" && tableEvs.split !== undefined) a.ev = tableEvs.split;
+    else if (a.action === "surrender" && tableEvs.surrender !== undefined) a.ev = tableEvs.surrender;
+  }
+}
+
 export function computeAvailableActionEVs(
   playerHand: Hand,
   dealerHand: Hand,
@@ -275,25 +286,33 @@ export function computeAvailableActionEVs(
 ): ActionEV[] {
   const available = computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
 
-  // For pairs with a strategy table, use the more precise composition-dependent
-  // EVs from the strategy table. The approximate fixed-probability method in
-  // computeActionEVs can mis-order borderline decisions (e.g. 7,7 vs 8 in 2-deck).
+  // For pairs, always use the strategy table's composition-dependent EVs
+  // (more precise than the fixed-probability method in computeActionEVs).
+  // For soft/hard hands, the per-hand EVs can mis-order borderline decisions
+  // (e.g. soft 17 vs 2 in 2-deck) because removing player cards from the shoe
+  // shifts probabilities enough to flip near-equal EVs. When the per-hand best
+  // action disagrees with basic strategy, use the strategy table EVs instead.
   if (strategyTable && playerHand.cards.length === 2) {
-    const isPair = playerHand.cards[0].rank === playerHand.cards[1].rank;
-    if (isPair) {
-      const pairValue = getCardValue(playerHand.cards[0]);
-      const dealerUpCard = getDealerUpCard(dealerHand);
-      if (dealerUpCard) {
-        const dealerValue = getCardValue(dealerUpCard);
+    const dealerUpCard = getDealerUpCard(dealerHand);
+    if (dealerUpCard) {
+      const dealerValue = getCardValue(dealerUpCard);
+      const isPair = playerHand.cards[0].rank === playerHand.cards[1].rank;
+
+      if (isPair) {
+        const pairValue = getCardValue(playerHand.cards[0]);
         const entry = strategyTable.pairs.get(pairValue)?.get(dealerValue);
         if (entry?.evs) {
-          const tableEvs = entry.evs;
-          for (const a of available) {
-            if (a.action === "stand") a.ev = tableEvs.stand;
-            else if (a.action === "hit") a.ev = tableEvs.hit;
-            else if (a.action === "double" && tableEvs.double !== undefined) a.ev = tableEvs.double;
-            else if (a.action === "split" && tableEvs.split !== undefined) a.ev = tableEvs.split;
-            else if (a.action === "surrender" && tableEvs.surrender !== undefined) a.ev = tableEvs.surrender;
+          applyTableEvs(available, entry.evs);
+        }
+      } else {
+        const perHandBest = available.reduce((a, b) => b.ev > a.ev ? b : a);
+        const strategyAction = getBasicStrategyAction(playerHand, dealerHand, rules);
+        if (perHandBest.action !== strategyAction) {
+          const { total, isSoft } = calculateHandValue(playerHand);
+          const tableMap = isSoft ? strategyTable.soft : strategyTable.hard;
+          const entry = tableMap.get(total)?.get(dealerValue);
+          if (entry?.evs) {
+            applyTableEvs(available, entry.evs);
           }
         }
       }
