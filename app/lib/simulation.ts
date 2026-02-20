@@ -117,7 +117,7 @@ function getHandResult(
 
   const playerValue = calculateHandValue(playerHand).total;
   const dealerValue = calculateHandValue(dealerHand).total;
-  const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplitAces;
+  const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplit;
   const dealerIsBlackjack = isBlackjack(dealerHand);
 
   if (isBusted(playerHand)) return "lose";
@@ -154,8 +154,8 @@ function simulateHand(deck: Card[], rules: HouseRules): { returned: number; bet:
     currentDeck = deal4.remainingDeck;
   }
 
-  const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplitAces;
-  let dealerIsBlackjack = isBlackjack(dealerHand);
+  const playerIsBlackjack = isBlackjack(playerHand) && !playerHand.isSplit;
+  const dealerIsBlackjack = isBlackjack(dealerHand);
 
   if (playerIsBlackjack || dealerIsBlackjack) {
     // Under no hole card rules: only deal one card if dealer shows 10/Ace
@@ -351,8 +351,6 @@ export function simulateHouseEdge(
       wins++;
     } else if (netResult === 0) {
       pushes++;
-    } else if (handSurrenders > 0) {
-      losses += handSurrenders;
     } else {
       losses++;
     }
