@@ -12,7 +12,7 @@ import {
   getHandResult,
 } from "../lib/game";
 import { getBasicStrategyAction } from "../lib/strategy";
-import { isBusted, isBlackjack, getDealerUpCard } from "../lib/deck";
+import { isBusted, isBlackjack, getDealerUpCard, getCardValue, dealCard } from "../lib/deck";
 
 function processForcedActions(state: GameState, rules: HouseRules): GameState {
   let currentState = state;
@@ -69,8 +69,23 @@ export function useGameState(
     const dealerHasBlackjack = !rules.noHoleCard && isBlackjack(newGame.dealerHand);
     if (playerHasBlackjack || dealerHasBlackjack) {
       if (rules.noHoleCard) {
-        // Deal dealer's second card so we can detect BJ push
-        newGame = dealerPlay(newGame, rules);
+        // No hole card rules: only deal one card if dealer shows 10/Ace
+        const upCard = getDealerUpCard(newGame.dealerHand);
+        const upCardValue = upCard ? getCardValue(upCard) : 0;
+        if (upCardValue === 10 || upCardValue === 11) {
+          const { card, remainingDeck } = dealCard(newGame.deck);
+          newGame = {
+            ...newGame,
+            dealerHand: {
+              ...newGame.dealerHand,
+              cards: [...newGame.dealerHand.cards, card],
+            },
+            deck: remainingDeck,
+            phase: "resolved",
+          };
+        } else {
+          newGame = { ...newGame, phase: "resolved" };
+        }
       } else {
         newGame.phase = "resolved";
       }
