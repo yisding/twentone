@@ -18,6 +18,7 @@ interface TestCase {
   dealerUpCard: Card;
   expected: string;
   category: string;
+  isSplit?: boolean;
 }
 
 const S17_RULES: HouseRules = {
@@ -74,6 +75,7 @@ function runTestSuite(
 
   for (const tc of testCases) {
     const playerHand = createHand(tc.playerCards);
+    if (tc.isSplit) playerHand.isSplit = true;
     const dealerHand = createHand([tc.dealerUpCard, card("2")]);
     const actual = getBasicStrategyAction(playerHand, dealerHand, rules);
 
@@ -212,6 +214,7 @@ function runComparison() {
     { playerCards: [card("6"), card("6")], dealerUpCard: card("3"), expected: "split", category: "No DAS - 6s vs 3 split" },
     { playerCards: [card("3"), card("3")], dealerUpCard: card("2"), expected: "hit", category: "No DAS - 3s vs 2 hit" },
     { playerCards: [card("3"), card("3")], dealerUpCard: card("4"), expected: "split", category: "No DAS - 3s vs 4 split" },
+    { playerCards: [card("5"), card("4")], dealerUpCard: card("6"), expected: "hit", category: "No DAS - split hand 9 vs 6 cannot double", isSplit: true },
   ];
 
   allDiscrepancies.push(...runTestSuite("No DAS rules", noDasTestCases, NO_DAS_RULES));
@@ -238,6 +241,7 @@ function runComparison() {
     { playerCards: [card("10"), card("5")], dealerUpCard: card("10"), expected: "hit", category: "No Surr - 15 vs 10 hit" },
     { playerCards: [card("10"), card("6")], dealerUpCard: card("9"), expected: "hit", category: "No Surr - 16 vs 9 hit" },
     { playerCards: [card("10"), card("6")], dealerUpCard: card("A"), expected: "hit", category: "No Surr - 16 vs A hit" },
+    { playerCards: [card("10"), card("6")], dealerUpCard: card("10"), expected: "hit", category: "No Surr - split hand cannot surrender", isSplit: true },
   ];
 
   allDiscrepancies.push(...runTestSuite("No surrender rules", noSurrenderTestCases, NO_SURRENDER_RULES));
