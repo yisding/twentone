@@ -197,9 +197,9 @@ export function useGameState(
     setGameState(newState);
   }, [gameState, rules]);
 
-  const availableActions = gameState?.phase === "playing"
+  const availableActions: PlayerAction[] = gameState?.phase === "playing"
     ? shouldPromptEarlySurrenderDecision(gameState, rules, hasCompletedEarlySurrenderDecision)
-      ? ["surrender"]
+      ? (["surrender"] as PlayerAction[])
       : getAvailableActions(gameState, rules).filter((action) =>
           !(
             rules.surrenderAllowed === "early" &&
