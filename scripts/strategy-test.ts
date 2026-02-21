@@ -337,36 +337,42 @@ function runComparison() {
   return allDiscrepancies;
 }
 
-const discrepancies = runComparison();
+export function runStrategyTests(): string[] {
+  const discrepancies = runComparison();
 
-const splitTwentyOne = createHand([card("K"), card("A")], { isSplit: true });
-const dealerNineteen = createHand([card("10"), card("9")]);
-const splitResult = getHandResult(splitTwentyOne, dealerNineteen);
-if (splitResult !== "win") {
-  discrepancies.push(`Split 21 payout check failed - Expected: win, Got: ${splitResult}`);
+  const splitTwentyOne = createHand([card("K"), card("A")], { isSplit: true });
+  const dealerNineteen = createHand([card("10"), card("9")]);
+  const splitResult = getHandResult(splitTwentyOne, dealerNineteen);
+  if (splitResult !== "win") {
+    discrepancies.push(`Split 21 payout check failed - Expected: win, Got: ${splitResult}`);
+  }
+
+  const fallbackRules: HouseRules = {
+    ...ENHC_NO_ACE_RULES,
+    doubleRestriction: "any",
+  };
+  const fallbackPlayerHand = createHand([card("10"), card("6")]);
+  const fallbackDealerHand = createHand([card("A"), card("9")]);
+  const fallbackAction = getBestActionWithoutSurrender(
+    fallbackPlayerHand,
+    fallbackDealerHand,
+    fallbackRules,
+  );
+  if (fallbackAction !== "hit") {
+    discrepancies.push(`No-surrender fallback failed - Expected: hit, Got: ${fallbackAction}`);
+  }
+
+  return discrepancies;
 }
 
-const fallbackRules: HouseRules = {
-  ...ENHC_NO_ACE_RULES,
-  doubleRestriction: "any",
-};
-const fallbackPlayerHand = createHand([card("10"), card("6")]);
-const fallbackDealerHand = createHand([card("A"), card("9")]);
-const fallbackAction = getBestActionWithoutSurrender(
-  fallbackPlayerHand,
-  fallbackDealerHand,
-  fallbackRules,
-);
-if (fallbackAction !== "hit") {
-  discrepancies.push(`No-surrender fallback failed - Expected: hit, Got: ${fallbackAction}`);
-}
+if (import.meta.main) {
+  const discrepancies = runStrategyTests();
 
-if (discrepancies.length === 0) {
-  console.log("\nAll tests passed! Strategy matches Wizard of Odds.");
-} else {
-  console.log(`\nFound ${discrepancies.length} discrepancies:\n`);
-  discrepancies.forEach((d, i) => console.log(`${i + 1}. ${d}`));
-  process.exit(1);
+  if (discrepancies.length === 0) {
+    console.log("\nAll tests passed! Strategy matches Wizard of Odds.");
+  } else {
+    console.log(`\nFound ${discrepancies.length} discrepancies:\n`);
+    discrepancies.forEach((d, i) => console.log(`${i + 1}. ${d}`));
+    process.exit(1);
+  }
 }
-
-export {};

@@ -295,7 +295,7 @@ const testCases: TestCase[] = [
   },
 ];
 
-function runTests() {
+export function runHouseEdgeTests(): { passed: number; failed: number } {
   console.log("House Edge Calculator Tests\n");
   console.log("=".repeat(60));
 
@@ -354,9 +354,10 @@ function runTests() {
   console.log("\n" + "=".repeat(60));
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
 
-  if (failed > 0) process.exit(1);
+  return { passed, failed };
 }
 
-runTests();
-
-export {};
+if (import.meta.main) {
+  const results = runHouseEdgeTests();
+  if (results.failed > 0) process.exit(1);
+}

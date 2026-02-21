@@ -281,20 +281,23 @@ function runContinueEVTests(): string[] {
   return discrepancies;
 }
 
-// =============================================
-// Run all tests
-// =============================================
-const allDiscrepancies: string[] = [];
+export function runEarlySurrenderSuite(): string[] {
+  const allDiscrepancies: string[] = [];
 
-allDiscrepancies.push(...runEarlySurrenderTests());
-allDiscrepancies.push(...runContinueEVTests());
+  allDiscrepancies.push(...runEarlySurrenderTests());
+  allDiscrepancies.push(...runContinueEVTests());
 
-if (allDiscrepancies.length === 0) {
-  console.log("\nAll early surrender tests passed!");
-} else {
-  console.log(`\nFound ${allDiscrepancies.length} discrepancies:\n`);
-  allDiscrepancies.forEach((d, i) => console.log(`${i + 1}. ${d}`));
-  process.exit(1);
+  return allDiscrepancies;
 }
 
-export {};
+if (import.meta.main) {
+  const allDiscrepancies = runEarlySurrenderSuite();
+
+  if (allDiscrepancies.length === 0) {
+    console.log("\nAll early surrender tests passed!");
+  } else {
+    console.log(`\nFound ${allDiscrepancies.length} discrepancies:\n`);
+    allDiscrepancies.forEach((d, i) => console.log(`${i + 1}. ${d}`));
+    process.exit(1);
+  }
+}
