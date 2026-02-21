@@ -177,22 +177,10 @@ export function useGameState(
     if (!gameState) return;
     if (!shouldPromptEarlySurrenderDecision(gameState, rules, hasCompletedEarlySurrenderDecision)) return;
 
-    if (rules.noHoleCard) {
-      const { card, remainingDeck } = dealCard(gameState.deck);
-      setGameState({
-        ...gameState,
-        dealerHand: {
-          ...gameState.dealerHand,
-          cards: [...gameState.dealerHand.cards, card],
-        },
-        deck: remainingDeck,
-      });
-    } else {
-      setGameState({
-        ...gameState,
-        phase: isBlackjack(gameState.dealerHand) ? "resolved" : gameState.phase,
-      });
-    }
+    setGameState({
+      ...gameState,
+      phase: isBlackjack(gameState.dealerHand) ? "resolved" : gameState.phase,
+    });
 
     setHasCompletedEarlySurrenderDecision(true);
   }, [gameState, rules, hasCompletedEarlySurrenderDecision]);
@@ -213,7 +201,12 @@ export function useGameState(
     ? shouldPromptEarlySurrenderDecision(gameState, rules, hasCompletedEarlySurrenderDecision)
       ? ["surrender"]
       : getAvailableActions(gameState, rules).filter((action) =>
-          !(rules.surrenderAllowed === "early" && action === "surrender"),
+          !(
+            rules.surrenderAllowed === "early" &&
+            !rules.noHoleCard &&
+            hasCompletedEarlySurrenderDecision &&
+            action === "surrender"
+          ),
         )
     : [];
 
@@ -242,14 +235,14 @@ function shouldPromptEarlySurrenderDecision(
   if (hasCompletedEarlySurrenderDecision) return false;
   if (state.phase !== "playing") return false;
   if (rules.surrenderAllowed !== "early") return false;
+  if (rules.noHoleCard) return false;
   if (state.currentHandIndex !== 0 || state.playerHands.length !== 1) return false;
 
   const hand = state.playerHands[0];
   const dealerUpCard = getDealerUpCard(state.dealerHand);
   const dealerUpCardValue = dealerUpCard ? getCardValue(dealerUpCard) : 0;
 
-  if (rules.noHoleCard && state.dealerHand.cards.length !== 1) return false;
-  if (!rules.noHoleCard && state.dealerHand.cards.length !== 2) return false;
+  if (state.dealerHand.cards.length !== 2) return false;
   if (hand.cards.length !== 2 || hand.isSplit) return false;
   if (dealerUpCardValue !== 10 && dealerUpCardValue !== 11) return false;
 
