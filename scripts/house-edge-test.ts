@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { calculateHouseEdge } from "../app/lib/houseEdge";
 import { HouseRules, DEFAULT_HOUSE_RULES } from "../app/lib/types";
 
@@ -357,7 +359,11 @@ export function runHouseEdgeTests(): { passed: number; failed: number } {
   return { passed, failed };
 }
 
-if (import.meta.main) {
+const isDirectRun =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
   const results = runHouseEdgeTests();
   if (results.failed > 0) process.exit(1);
 }

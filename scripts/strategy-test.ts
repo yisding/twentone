@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { getBasicStrategyAction, getBestActionWithoutSurrender } from "../app/lib/strategy";
 import { Hand, HouseRules, DEFAULT_HOUSE_RULES, Card } from "../app/lib/types";
 import { createEmptyHand, getHandResult } from "../app/lib/game";
@@ -365,7 +367,11 @@ export function runStrategyTests(): string[] {
   return discrepancies;
 }
 
-if (import.meta.main) {
+const isDirectRun =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
   const discrepancies = runStrategyTests();
 
   if (discrepancies.length === 0) {

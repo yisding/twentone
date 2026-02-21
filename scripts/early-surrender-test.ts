@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { getBasicStrategyAction } from "../app/lib/strategy";
 import { computeActionEVs } from "../app/lib/ev-utils";
 import { Hand, HouseRules, DEFAULT_HOUSE_RULES, Card } from "../app/lib/types";
@@ -290,7 +292,11 @@ export function runEarlySurrenderSuite(): string[] {
   return allDiscrepancies;
 }
 
-if (import.meta.main) {
+const isDirectRun =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
   const allDiscrepancies = runEarlySurrenderSuite();
 
   if (allDiscrepancies.length === 0) {
