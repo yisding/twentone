@@ -128,6 +128,7 @@ interface RuleConstants {
   hitSoft17: boolean;
   canSurrender: boolean;
   isEarlySurrender: boolean;
+  blockSurrenderVsAce: boolean;
   isDAS: boolean;
   isSingleOrDoubleDeck: boolean;
   doubleRestriction: string;
@@ -144,6 +145,7 @@ function precomputeRules(rules: HouseRules): RuleConstants {
     hitSoft17: rules.hitSoft17,
     canSurrender: rules.surrenderAllowed !== "none",
     isEarlySurrender: isEarlySurrender(rules),
+    blockSurrenderVsAce: rules.surrenderAllowed === "enhcNoAce",
     isDAS: rules.doubleAfterSplit,
     isSingleOrDoubleDeck: rules.decks <= 2,
     doubleRestriction: rules.doubleRestriction,
@@ -188,17 +190,30 @@ function getStrategyAction(
     }
 
     if (pairVal === 8) {
-      if (rc.hitSoft17 && dealerUpValue === 11 && canSurrenderHand) return Action.Surrender;
+      if (canSurrenderHand) {
+        if (rc.isEarlySurrender && (dealerUpValue === 10 || dealerUpValue === 11)) {
+          return Action.Surrender;
+        }
+        if (!rc.isEarlySurrender && rc.hitSoft17 && dealerUpValue === 11) {
+          return Action.Surrender;
+        }
+      }
       return Action.Split;
     }
 
     if (pairVal === 7) {
+      if (canSurrenderHand && rc.isEarlySurrender && (dealerUpValue === 10 || dealerUpValue === 11)) {
+        return Action.Surrender;
+      }
       if (dealerUpValue <= 7) return Action.Split;
       if (dealerUpValue === 8 && rc.isSingleOrDoubleDeck) return Action.Split;
       return Action.Hit;
     }
 
     if (pairVal === 6) {
+      if (canSurrenderHand && rc.isEarlySurrender && dealerUpValue === 11) {
+        return Action.Surrender;
+      }
       if (rc.isDAS) {
         if (dealerUpValue >= 2 && dealerUpValue <= 6) return Action.Split;
       } else {
@@ -219,6 +234,9 @@ function getStrategyAction(
     }
 
     if (pairVal === 3 || pairVal === 2) {
+      if (pairVal === 3 && canSurrenderHand && rc.isEarlySurrender && dealerUpValue === 11) {
+        return Action.Surrender;
+      }
       if (rc.isDAS) {
         if (dealerUpValue >= 2 && dealerUpValue <= 7) return Action.Split;
       } else {
@@ -274,13 +292,22 @@ function getStrategyAction(
 
   // Hard total strategy
   if (canSurrenderHand) {
-    if (total === 16 && dealerUpValue >= 9 && !(dealerUpValue === 9 && rc.decks < 4)) {
-      return Action.Surrender;
-    }
-    if (total === 15 && dealerUpValue === 10) return Action.Surrender;
-    if (rc.hitSoft17) {
-      if (total === 15 && dealerUpValue === 11) return Action.Surrender;
-      if (total === 17 && dealerUpValue === 11) return Action.Surrender;
+    if (rc.isEarlySurrender) {
+      if (dealerUpValue === 11 && ((total >= 5 && total <= 7) || (total >= 12 && total <= 17))) {
+        return Action.Surrender;
+      }
+      if (dealerUpValue === 10 && total >= 14 && total <= 16) {
+        return Action.Surrender;
+      }
+    } else {
+      if (total === 16 && dealerUpValue >= 9 && !(dealerUpValue === 9 && rc.decks < 4)) {
+        return Action.Surrender;
+      }
+      if (total === 15 && dealerUpValue === 10) return Action.Surrender;
+      if (rc.hitSoft17) {
+        if (total === 15 && dealerUpValue === 11) return Action.Surrender;
+        if (total === 17 && dealerUpValue === 11) return Action.Surrender;
+      }
     }
   }
 
@@ -325,13 +352,18 @@ function validateAction(
   action: Action,
   hand: SimHand,
   numHands: number,
+  dealerUpValue: number,
   rc: RuleConstants,
 ): Action {
   if (action === Action.Hit || action === Action.Stand) return action;
 
   if (action === Action.Surrender) {
     // Surrender requires: allowed by rules, 2 cards, not split
-    if (rc.canSurrender && hand.cardCount === 2 && !hand.isSplit) return Action.Surrender;
+    const canSurrenderByUpCard =
+      rc.canSurrender &&
+      (!rc.blockSurrenderVsAce || dealerUpValue !== 11);
+
+    if (canSurrenderByUpCard && hand.cardCount === 2 && !hand.isSplit) return Action.Surrender;
     return Action.Stand;
   }
 
@@ -526,7 +558,7 @@ export function simulateHouseEdge(
       while (!hand.isStanding && !hand.isSurrendered && !hand.isBusted) {
         const dealerUpValue = RANK_VALUE[dealerHand.cards[0]];
         const action = getStrategyAction(hand, dealerUpValue, rc);
-        const validated = validateAction(action, hand, numPlayerHands, rc);
+        const validated = validateAction(action, hand, numPlayerHands, dealerUpValue, rc);
 
         if (validated !== action) {
           if ((action === Action.Double || action === Action.Split) && validated === Action.Hit) {
