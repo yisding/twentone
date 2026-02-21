@@ -43,11 +43,17 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
           <SelectOption
             label="Surrender allowed"
             value={rules.surrenderAllowed}
-            options={[
-              { value: "none", label: "None" },
-              { value: "early", label: "Early" },
-              { value: "late", label: "Late" },
-            ]}
+            options={rules.noHoleCard
+              ? [
+                  { value: "none", label: "None" },
+                  { value: "early", label: "Against all upcards" },
+                  { value: "late", label: "Everything except Ace" },
+                ]
+              : [
+                  { value: "none", label: "None" },
+                  { value: "early", label: "Early" },
+                  { value: "late", label: "Late" },
+                ]}
             onChange={(surrenderAllowed) =>
               onRulesChange({ ...rules, surrenderAllowed: surrenderAllowed as HouseRules["surrenderAllowed"] })
             }

@@ -10,6 +10,7 @@ import {
   getCardValue,
 } from "./deck";
 import { getBasicStrategyAction } from "./strategy";
+import { canSurrenderAgainstDealerUpCard } from "./surrender";
 
 function createEmptyHand(): Hand {
   return {
@@ -25,6 +26,7 @@ function createEmptyHand(): Hand {
 function getAvailableActions(
   hand: Hand,
   allHands: Hand[],
+  dealerHand: Hand,
   rules: HouseRules,
 ): ("hit" | "stand" | "double" | "split" | "surrender")[] {
   const actions: ("hit" | "stand" | "double" | "split" | "surrender")[] = [];
@@ -68,7 +70,7 @@ function getAvailableActions(
   }
 
   if (
-    rules.surrenderAllowed !== "none" &&
+    canSurrenderAgainstDealerUpCard(rules, dealerHand) &&
     hand.cards.length === 2 &&
     !hand.isSplit
   ) {
@@ -193,7 +195,7 @@ function simulateHand(deck: Card[], rules: HouseRules): { returned: number; bet:
 
     while (!hand.isStanding && !hand.isSurrendered && !isBusted(hand)) {
       const action = getBasicStrategyAction(hand, dealerHand, rules);
-      const availableActions = getAvailableActions(hand, playerHands, rules);
+      const availableActions = getAvailableActions(hand, playerHands, dealerHand, rules);
 
       if (!availableActions.includes(action)) {
         if ((action === "double" || action === "split") && availableActions.includes("hit")) {

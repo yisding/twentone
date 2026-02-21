@@ -14,6 +14,7 @@ import {
   canSplit,
   canDouble,
 } from "./deck";
+import { canSurrenderAgainstDealerUpCard } from "./surrender";
 
 export function createEmptyHand(): Hand {
   return {
@@ -111,7 +112,7 @@ export function getAvailableActions(
   }
 
   if (
-    rules.surrenderAllowed !== "none" &&
+    canSurrenderAgainstDealerUpCard(rules, state.dealerHand) &&
     hand.cards.length === 2 &&
     !hand.isSplit
   ) {
