@@ -10,7 +10,7 @@ import {
   getCardValue,
 } from "./deck";
 import { getBasicStrategyAction } from "./strategy";
-import { canSurrenderAgainstDealerUpCard } from "./surrender";
+import { canSurrenderAgainstDealerUpCard, isEarlySurrender } from "./surrender";
 
 function createEmptyHand(): Hand {
   return {
@@ -161,7 +161,7 @@ function simulateHand(deck: Card[], rules: HouseRules): { returned: number; bet:
 
   if (
     !rules.noHoleCard &&
-    rules.surrenderAllowed === "early" &&
+    isEarlySurrender(rules) &&
     dealerIsBlackjack &&
     !playerIsBlackjack
   ) {

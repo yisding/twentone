@@ -13,6 +13,7 @@
 
 import { HouseRules, DEFAULT_HOUSE_RULES } from "./types";
 import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
+import { isEarlySurrender, isLateSurrender } from "./surrender";
 
 // Module-level mutable probability source (defaults to infinite deck)
 const currentProbs = INFINITE_DECK_PROBS.slice();
@@ -333,7 +334,7 @@ export function calculateInfiniteDeckEV(
         } else {
           // Non-blackjack player hand
           // Determine best play EV (conditioned on no dealer BJ)
-          const canSurrenderLate = rules.surrenderAllowed === "late";
+          const canSurrenderLate = isLateSurrender(rules);
           let playEV = evOptimal(pTotal, pSoft, true, canSurrenderLate);
 
           // Check if splitting is better
@@ -342,7 +343,7 @@ export function calculateInfiniteDeckEV(
             if (splitEv > playEV) playEV = splitEv;
           }
 
-          if (rules.surrenderAllowed === "early") {
+          if (isEarlySurrender(rules)) {
             // Early surrender: decide before dealer peek
             // Surrender EV = -0.5 (unconditional)
             // Play EV = P(dealer BJ)*(-1) + P(no BJ)*playEV
@@ -384,8 +385,8 @@ export function calculateFiniteDeckEV(
       : rules.blackjackPays === "6:5"
         ? 1.2
         : 1.0;
-  const canSurrLate = rules.surrenderAllowed === "late";
-  const isEarlySurr = rules.surrenderAllowed === "early";
+  const canSurrLate = isLateSurrender(rules);
+  const isEarlySurr = isEarlySurrender(rules);
 
   let totalEV = 0;
   let totalWeight = 0;
@@ -649,8 +650,8 @@ export function calculateCDEV(
       : rules.blackjackPays === "6:5"
         ? 1.2
         : 1.0;
-  const surrLate = rules.surrenderAllowed === "late";
-  const surrEarly = rules.surrenderAllowed === "early";
+  const surrLate = isLateSurrender(rules);
+  const surrEarly = isEarlySurrender(rules);
 
   dealerCDMemo.clear();
   let totalEV = 0;
@@ -844,7 +845,7 @@ export function generateStrategyTable(
 
     // Hard totals 5-21
     for (let total = 5; total <= 21; total++) {
-      const canSurr = rules.surrenderAllowed === "late";
+      const canSurr = isLateSurrender(rules);
 
       const standEV = evStand(total);
       let hitEV = 0;
@@ -891,7 +892,7 @@ export function generateStrategyTable(
 
     // Soft totals 13-21 (A+2 through A+10)
     for (let total = 13; total <= 21; total++) {
-      const canSurr = rules.surrenderAllowed === "late";
+      const canSurr = isLateSurrender(rules);
 
       const standEV = evStand(total);
       let hitEV = 0;
@@ -938,7 +939,7 @@ export function generateStrategyTable(
     // Pairs (card value 2-11)
     for (const cv of CARD_VALUES) {
       const [total, isSoft] = addCard(cv, cv === 11, cv);
-      const canSurr = rules.surrenderAllowed === "late";
+      const canSurr = isLateSurrender(rules);
 
       let standEV: number;
       let hitEV: number;

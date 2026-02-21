@@ -47,8 +47,8 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
               options={rules.noHoleCard
                 ? [
                     { value: "none", label: "None" },
-                    { value: "early", label: "All upcards" },
-                    { value: "late", label: "No Ace" },
+                    { value: "enhcAll", label: "All upcards" },
+                    { value: "enhcNoAce", label: "No Ace" },
                   ]
                 : [
                     { value: "none", label: "None" },
@@ -88,7 +88,21 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
             <ToggleOption
               label="No hole card (ENHC)"
               checked={rules.noHoleCard}
-              onChange={(noHoleCard) => onRulesChange({ ...rules, noHoleCard })}
+              onChange={(noHoleCard) => {
+                const surrenderAllowed = noHoleCard
+                  ? rules.surrenderAllowed === "early"
+                    ? "enhcAll"
+                    : rules.surrenderAllowed === "late"
+                      ? "enhcNoAce"
+                      : rules.surrenderAllowed
+                  : rules.surrenderAllowed === "enhcAll"
+                    ? "early"
+                    : rules.surrenderAllowed === "enhcNoAce"
+                      ? "late"
+                      : rules.surrenderAllowed;
+
+                onRulesChange({ ...rules, noHoleCard, surrenderAllowed });
+              }}
             />
 
             <SelectOption
