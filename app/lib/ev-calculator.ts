@@ -15,6 +15,18 @@ import { HouseRules, DEFAULT_HOUSE_RULES } from "./types";
 import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
 import { isEarlySurrender, isLateSurrender } from "./surrender";
 
+function tableCanSurrender(rules: HouseRules, dealerUpcard: number): boolean {
+  if (isEarlySurrender(rules)) {
+    if (rules.surrenderAllowed === "enhcNoAce" && dealerUpcard === 11) return false;
+    return true;
+  }
+  if (isLateSurrender(rules)) {
+    if (rules.surrenderAllowed === "enhcNoAce" && dealerUpcard === 11) return false;
+    return true;
+  }
+  return false;
+}
+
 // Module-level mutable probability source (defaults to infinite deck)
 const currentProbs = INFINITE_DECK_PROBS.slice();
 
@@ -845,7 +857,7 @@ export function generateStrategyTable(
 
     // Hard totals 5-21
     for (let total = 5; total <= 21; total++) {
-      const canSurr = isLateSurrender(rules);
+      const canSurr = tableCanSurrender(rules, dealerKey);
 
       const standEV = evStand(total);
       let hitEV = 0;
@@ -892,7 +904,7 @@ export function generateStrategyTable(
 
     // Soft totals 13-21 (A+2 through A+10)
     for (let total = 13; total <= 21; total++) {
-      const canSurr = isLateSurrender(rules);
+      const canSurr = tableCanSurrender(rules, dealerKey);
 
       const standEV = evStand(total);
       let hitEV = 0;
@@ -939,7 +951,7 @@ export function generateStrategyTable(
     // Pairs (card value 2-11)
     for (const cv of CARD_VALUES) {
       const [total, isSoft] = addCard(cv, cv === 11, cv);
-      const canSurr = isLateSurrender(rules);
+      const canSurr = tableCanSurrender(rules, dealerKey);
 
       let standEV: number;
       let hitEV: number;

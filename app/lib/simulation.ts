@@ -9,7 +9,7 @@ import {
   canDouble,
   getCardValue,
 } from "./deck";
-import { getBasicStrategyAction } from "./strategy";
+import { getBasicStrategyAction, getBestActionWithoutSurrender } from "./strategy";
 import { canSurrenderAgainstDealerUpCard, isEarlySurrender } from "./surrender";
 
 function createEmptyHand(): Hand {
@@ -207,6 +207,64 @@ function simulateHand(deck: Card[], rules: HouseRules): { returned: number; bet:
           currentDeck = hitDeal.remainingDeck;
           playerHands[currentHandIndex] = hand;
           continue;
+        }
+        if (action === "surrender") {
+          const noSurrenderAction = getBestActionWithoutSurrender(hand, dealerHand, rules);
+          if (availableActions.includes(noSurrenderAction)) {
+            if (noSurrenderAction === "hit") {
+              const hitDeal = dealCard(currentDeck);
+              hand = {
+                ...hand,
+                cards: [...hand.cards, hitDeal.card],
+              };
+              currentDeck = hitDeal.remainingDeck;
+              playerHands[currentHandIndex] = hand;
+              continue;
+            }
+            if (noSurrenderAction === "double") {
+              const doubleDeal = dealCard(currentDeck);
+              hand = {
+                ...hand,
+                cards: [...hand.cards, doubleDeal.card],
+                isDoubledDown: true,
+                isStanding: true,
+              };
+              currentDeck = doubleDeal.remainingDeck;
+              playerHands[currentHandIndex] = hand;
+              break;
+            }
+            if (noSurrenderAction === "split") {
+              const [card1, card2] = hand.cards;
+              const isSplittingAces = card1.rank === "A";
+
+              const splitDeal1 = dealCard(currentDeck);
+              currentDeck = splitDeal1.remainingDeck;
+              const splitDeal2 = dealCard(currentDeck);
+              currentDeck = splitDeal2.remainingDeck;
+
+              const newHand1: Hand = {
+                cards: [card1, splitDeal1.card],
+                isDoubledDown: false,
+                isSplit: true,
+                isSplitAces: isSplittingAces || hand.isSplitAces,
+                isSurrendered: false,
+                isStanding: false,
+              };
+
+              const newHand2: Hand = {
+                cards: [card2, splitDeal2.card],
+                isDoubledDown: false,
+                isSplit: true,
+                isSplitAces: isSplittingAces || hand.isSplitAces,
+                isSurrendered: false,
+                isStanding: false,
+              };
+
+              playerHands.splice(currentHandIndex, 1, newHand1, newHand2);
+              hand = newHand1;
+              continue;
+            }
+          }
         }
         hand = { ...hand, isStanding: true };
         playerHands[currentHandIndex] = hand;

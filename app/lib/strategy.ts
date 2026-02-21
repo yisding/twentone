@@ -5,11 +5,29 @@ import {
   getCardValue,
   getDealerUpCard,
 } from "./deck";
+import { canSurrenderAgainstDealerUpCard } from "./surrender";
 
 export function getBasicStrategyAction(
   playerHand: Hand,
   dealerHand: Hand,
   rules: HouseRules,
+): PlayerAction {
+  return getBasicStrategyActionInternal(playerHand, dealerHand, rules, true);
+}
+
+export function getBestActionWithoutSurrender(
+  playerHand: Hand,
+  dealerHand: Hand,
+  rules: HouseRules,
+): PlayerAction {
+  return getBasicStrategyActionInternal(playerHand, dealerHand, rules, false);
+}
+
+function getBasicStrategyActionInternal(
+  playerHand: Hand,
+  dealerHand: Hand,
+  rules: HouseRules,
+  allowSurrender: boolean,
 ): PlayerAction {
   const { total, isSoft } = calculateHandValue(playerHand);
   const dealerUpCard = getDealerUpCard(dealerHand);
@@ -17,7 +35,9 @@ export function getBasicStrategyAction(
 
   const dealerValue = getCardValue(dealerUpCard);
   const canSurrender =
+    allowSurrender &&
     rules.surrenderAllowed !== "none" &&
+    canSurrenderAgainstDealerUpCard(rules, dealerHand) &&
     playerHand.cards.length === 2 &&
     !playerHand.isSplit;
 

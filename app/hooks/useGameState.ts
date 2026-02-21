@@ -11,7 +11,7 @@ import {
   dealerPlay,
   getHandResult,
 } from "../lib/game";
-import { getBasicStrategyAction } from "../lib/strategy";
+import { getBasicStrategyAction, getBestActionWithoutSurrender } from "../lib/strategy";
 import { isBusted, isBlackjack, getDealerUpCard, getCardValue, dealCard } from "../lib/deck";
 
 function processForcedActions(state: GameState, rules: HouseRules): GameState {
@@ -364,6 +364,10 @@ function getExpectedPlayableAction(state: GameState, rules: HouseRules, isESProm
     availableActions.includes("hit")
   ) {
     return "hit";
+  }
+
+  if (expectedAction === "surrender") {
+    return getBestActionWithoutSurrender(hand, state.dealerHand, rules);
   }
 
   return "stand";
