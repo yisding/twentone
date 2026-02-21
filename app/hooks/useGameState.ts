@@ -137,16 +137,19 @@ export function useGameState(
 
       let newState = applyAction(gameState, action, rules, true, needsEarlySurrenderDecision);
 
-      newState.lastAvailableActions = needsEarlySurrenderDecision
-        ? ["surrender", "continue"]
-        : getAvailableActions(gameState, rules).filter((a) =>
-          !(
-            rules.surrenderAllowed === "early" &&
-            !rules.noHoleCard &&
-            hasCompletedEarlySurrenderDecision &&
-            a === "surrender"
-          )
-        );
+      newState = {
+        ...newState,
+        lastAvailableActions: needsEarlySurrenderDecision
+          ? ["surrender", "continue"]
+          : getAvailableActions(gameState, rules).filter((a) =>
+            !(
+              rules.surrenderAllowed === "early" &&
+              !rules.noHoleCard &&
+              hasCompletedEarlySurrenderDecision &&
+              a === "surrender"
+            )
+          ),
+      };
 
       if (shouldResolveDealerBlackjackAfterEarlySurrenderDecision(gameState, rules, action)) {
         newState = {
@@ -318,6 +321,7 @@ function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, 
       case "double": newState = playerDouble(newState); break;
       case "split": newState = playerSplit(newState); break;
       case "surrender": newState = playerSurrender(newState); break;
+      case "continue": break;
     }
   }
 
