@@ -200,7 +200,7 @@ function cdDealerRec(total: number, isSoft: boolean, hitSoft17: boolean, shoe: n
   return d;
 }
 
-function cdDealerDist(upcard: number, hitSoft17: boolean, shoe: number[], st: number): Float64Array {
+function cdDealerDist(upcard: number, hitSoft17: boolean, shoe: number[], st: number, noHoleCard: boolean): Float64Array {
   cdDealerMemo.clear();
 
   const dist = new Float64Array(6);
@@ -215,14 +215,16 @@ function cdDealerDist(upcard: number, hitSoft17: boolean, shoe: number[], st: nu
     for (let j = 0; j < 6; j++) dist[j] += pH * sub[j];
   }
 
-  // Condition on no dealer blackjack (peek game)
-  let bjProb = 0;
-  if (upcard === 11 && shoe[8] > 0) bjProb = shoe[8] / st;
-  else if (upcard === 10 && shoe[9] > 0) bjProb = shoe[9] / st;
-  if (bjProb > 0) {
-    dist[4] -= bjProb;
-    const scale = 1 / (1 - bjProb);
-    for (let j = 0; j < 6; j++) dist[j] *= scale;
+  // Condition on no dealer blackjack (peek game only)
+  if (!noHoleCard) {
+    let bjProb = 0;
+    if (upcard === 11 && shoe[8] > 0) bjProb = shoe[8] / st;
+    else if (upcard === 10 && shoe[9] > 0) bjProb = shoe[9] / st;
+    if (bjProb > 0) {
+      dist[4] -= bjProb;
+      const scale = 1 / (1 - bjProb);
+      for (let j = 0; j < 6; j++) dist[j] *= scale;
+    }
   }
 
   return dist;
@@ -409,12 +411,12 @@ export function computeActionEVs(
       const legalHoleMass = st - shoe[forbiddenHoleIdx];
 
       if (legalHoleMass <= 0) {
-        // Degenerate state fallback
-        const dd = cdDealerDist(dealerValue, rules.hitSoft17, shoe, st);
-        standEV = evStand(total, dd);
-        hitEV = cdHitEV(total, isSoft, dd, shoe, st);
-        if (dblAllowed) dblEV = cdDoubleEV(total, isSoft, dd, shoe, st);
-        if (splitAllowed && pairValue !== null) splitEv = cdSplitEV(pairValue, dd, shoe, st, rules);
+        // Degenerate: every remaining card is the forbidden type.
+        // This is an impossible state in real play; return neutral EVs.
+        standEV = 0;
+        hitEV = 0;
+        dblEV = 0;
+        splitEv = 0;
       } else {
         let aggStand = 0;
         let aggHit = 0;
@@ -428,7 +430,6 @@ export function computeActionEVs(
           shoe[hi]--;
           const stAfterHole = st - 1;
 
-          cdDealerMemo.clear();
           cdHitMemo.clear();
           cdOptMemo.clear();
 
@@ -455,7 +456,7 @@ export function computeActionEVs(
       }
     } else {
       // Build dealer distribution with shoe tracking
-      const dd = cdDealerDist(dealerValue, rules.hitSoft17, shoe, st);
+      const dd = cdDealerDist(dealerValue, rules.hitSoft17, shoe, st, rules.noHoleCard);
 
       // Player EVs with shoe tracking
       standEV = evStand(total, dd);
