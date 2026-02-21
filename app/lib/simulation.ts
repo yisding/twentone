@@ -1,4 +1,4 @@
-import { HouseRules, Hand, Card, DEFAULT_HOUSE_RULES } from "./types";
+import { HouseRules, Hand, Card, PlayerAction, DEFAULT_HOUSE_RULES } from "./types";
 import {
   createShoe,
   dealCard,
@@ -28,8 +28,8 @@ function getAvailableActions(
   allHands: Hand[],
   dealerHand: Hand,
   rules: HouseRules,
-): ("hit" | "stand" | "double" | "split" | "surrender")[] {
-  const actions: ("hit" | "stand" | "double" | "split" | "surrender")[] = [];
+): PlayerAction[] {
+  const actions: PlayerAction[] = [];
 
   if (!hand || hand.isStanding || hand.isSurrendered || isBusted(hand)) {
     return actions;

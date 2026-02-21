@@ -76,19 +76,30 @@ function getPairStrategy(
   }
 
   if (pairValue === 8) {
-    if (rules.hitSoft17 && dealerValue === 11 && canSurrender) {
-      return "surrender";
+    if (canSurrender) {
+      if (rules.surrenderAllowed === "early" && (dealerValue === 10 || dealerValue === 11)) {
+        return "surrender";
+      }
+      if (rules.surrenderAllowed !== "early" && rules.hitSoft17 && dealerValue === 11) {
+        return "surrender";
+      }
     }
     return "split";
   }
 
   if (pairValue === 7) {
+    if (canSurrender && rules.surrenderAllowed === "early" && (dealerValue === 10 || dealerValue === 11)) {
+      return "surrender";
+    }
     if (dealerValue <= 7) return "split";
     if (dealerValue === 8 && isSingleOrDoubleDeck) return "split";
     return "hit";
   }
 
   if (pairValue === 6) {
+    if (canSurrender && rules.surrenderAllowed === "early" && dealerValue === 11) {
+      return "surrender";
+    }
     if (rules.doubleAfterSplit) {
       if (dealerValue >= 2 && dealerValue <= 6) return "split";
     } else {
@@ -109,6 +120,9 @@ function getPairStrategy(
   }
 
   if (pairValue === 3 || pairValue === 2) {
+    if (pairValue === 3 && canSurrender && rules.surrenderAllowed === "early" && dealerValue === 11) {
+      return "surrender";
+    }
     if (rules.doubleAfterSplit) {
       if (dealerValue >= 2 && dealerValue <= 7) return "split";
     } else {
@@ -177,17 +191,26 @@ function getHardTotalStrategy(
   const canDouble = canDoubleByRules(hand, total, rules);
 
   if (canSurrender) {
-    if (
-      total === 16 &&
-      dealerValue >= 9 &&
-      !(dealerValue === 9 && rules.decks < 4)
-    ) {
-      return "surrender";
-    }
-    if (total === 15 && dealerValue === 10) return "surrender";
-    if (rules.hitSoft17) {
-      if (total === 15 && dealerValue === 11) return "surrender";
-      if (total === 17 && dealerValue === 11) return "surrender";
+    if (rules.surrenderAllowed === "early") {
+      if (dealerValue === 11 && ((total >= 5 && total <= 7) || (total >= 12 && total <= 17))) {
+        return "surrender";
+      }
+      if (dealerValue === 10 && total >= 14 && total <= 16) {
+        return "surrender";
+      }
+    } else {
+      if (
+        total === 16 &&
+        dealerValue >= 9 &&
+        !(dealerValue === 9 && rules.decks < 4)
+      ) {
+        return "surrender";
+      }
+      if (total === 15 && dealerValue === 10) return "surrender";
+      if (rules.hitSoft17) {
+        if (total === 15 && dealerValue === 11) return "surrender";
+        if (total === 17 && dealerValue === 11) return "surrender";
+      }
     }
   }
 
@@ -237,6 +260,7 @@ export function actionToString(action: PlayerAction): string {
     double: "Double Down",
     split: "Split",
     surrender: "Surrender",
+    continue: "Continue",
   };
   return map[action];
 }
@@ -312,6 +336,10 @@ function getPairExplanation(
     return "20 is a strong hand. Splitting would risk turning one winner into two losers.";
   }
 
+  if (action === "surrender" && rules.surrenderAllowed === "early") {
+    return "Against a strong dealer upcard, early surrender is mathematically superior to splitting or hitting this pair.";
+  }
+
   if (action === "hit" && pairValue === 8 && rules.hitSoft17 && dealerValue === 11) {
     return "Against dealer Ace with H17, surrender if available. Otherwise, you must hit the hard 16.";
   }
@@ -319,7 +347,7 @@ function getPairExplanation(
   if (action === "hit" && pairValue === 6 && dealerValue === 2 && !rules.doubleAfterSplit) {
     ruleNotes.push("With DAS, you would split this hand.");
   }
-  
+
   if (action === "hit" && (pairValue === 4 || pairValue === 3 || pairValue === 2)) {
     if (pairValue === 4 && (dealerValue === 5 || dealerValue === 6) && !rules.doubleAfterSplit) {
       ruleNotes.push("With DAS, you would split this hand.");
@@ -397,6 +425,9 @@ function getHardExplanation(
   const isDealerWeak = dealerValue >= 2 && dealerValue <= 6;
 
   if (action === "surrender") {
+    if (rules.surrenderAllowed === "early") {
+      return "Early surrender allows you to escape before the dealer checks for blackjack, making it correct to surrender many hard hands against strong upcards.";
+    }
     if (total === 16) {
       if (dealerValue === 9 && rules.decks >= 4) {
         ruleNotes.push("Surrendering 16 vs 9 is only correct with 4+ decks. With 1-2 decks, hit instead.");

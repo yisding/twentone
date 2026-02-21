@@ -10,6 +10,7 @@
     "test:strategy": "tsx scripts/strategy-test.ts",
     "test:house-edge": "tsx scripts/house-edge-test.ts",
     "test:ev-mistakes": "tsx scripts/ev-cost-of-mistakes.ts",
+    "test:early-surrender": "tsx scripts/early-surrender-test.ts",
     "simulate": "tsx scripts/simulate-house-edge.ts"
   },
   "dependencies": {
