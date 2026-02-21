@@ -27,6 +27,8 @@ export default function Home() {
     handleDealerPlay,
     nextHand,
     availableActions,
+    needsEarlySurrenderDecision,
+    declineEarlySurrender,
   } = useGameState(
     rules,
     useCallback(() => recordAnswer(true), [recordAnswer]),
@@ -78,6 +80,8 @@ export default function Home() {
                     currentHand={currentHand}
                     showCorrectAnswer={showCorrectAnswer}
                     availableActions={availableActions}
+                    needsEarlySurrenderDecision={needsEarlySurrenderDecision}
+                    onDeclineEarlySurrender={declineEarlySurrender}
                     onAction={handleAction}
                     onDealerPlay={handleDealerPlay}
                     onNextHand={nextHand}

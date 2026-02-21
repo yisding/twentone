@@ -2,6 +2,7 @@ import { Hand, HouseRules, PlayerAction } from "./types";
 import { calculateHandValue, getCardValue, getDealerUpCard } from "./deck";
 import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
 import type { StrategyTable, StrategyEntry } from "./ev-calculator";
+import { canSurrenderAgainstDealerUpCard } from "./surrender";
 
 // =========================================================================
 // Infinite-deck helpers (fixed probabilities, used when decks < 1 or > 8)
@@ -370,7 +371,7 @@ export function computeActionEVs(
     canDouble(total, rules) &&
     (!playerHand.isSplit || rules.doubleAfterSplit);
   const splitAllowed = isPair && rules.maxSplitHands >= 2 && !playerHand.isSplit;
-  const surrAllowed = rules.surrenderAllowed !== "none" && isTwoCardHand && !playerHand.isSplit;
+  const surrAllowed = canSurrenderAgainstDealerUpCard(rules, dealerHand) && isTwoCardHand && !playerHand.isSplit;
 
   const useCD = Number.isInteger(rules.decks) && rules.decks >= 1 && rules.decks <= 8;
 

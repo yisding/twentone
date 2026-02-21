@@ -1,4 +1,5 @@
 import { HouseRules, DEFAULT_HOUSE_RULES } from "./types";
+import { isEarlySurrender } from "./surrender";
 
 // --- Rank encoding ---
 // Ranks 1-13: A=1, 2=2, ..., 10=10, J=11, Q=12, K=13
@@ -142,7 +143,7 @@ function precomputeRules(rules: HouseRules): RuleConstants {
   return {
     hitSoft17: rules.hitSoft17,
     canSurrender: rules.surrenderAllowed !== "none",
-    isEarlySurrender: rules.surrenderAllowed === "early",
+    isEarlySurrender: isEarlySurrender(rules),
     isDAS: rules.doubleAfterSplit,
     isSingleOrDoubleDeck: rules.decks <= 2,
     doubleRestriction: rules.doubleRestriction,
