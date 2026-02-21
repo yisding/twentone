@@ -6,6 +6,7 @@ const ACTION_LABELS: Record<PlayerAction, string> = {
   double: "Double Down",
   split: "Split",
   surrender: "Surrender",
+  continue: "Continue Hand",
 };
 
 export function actionToString(action: PlayerAction): string {
@@ -18,6 +19,7 @@ const ACTION_VARIANTS: Record<PlayerAction, "default" | "secondary" | "destructi
   double: "default",
   split: "default",
   surrender: "destructive",
+  continue: "secondary",
 };
 
 const ACTION_COLORS: Record<PlayerAction, string> = {
@@ -26,6 +28,7 @@ const ACTION_COLORS: Record<PlayerAction, string> = {
   double: "bg-purple-600 hover:bg-purple-700",
   split: "bg-orange-600 hover:bg-orange-700",
   surrender: "",
+  continue: "",
 };
 
 export function getActionVariant(action: PlayerAction) {

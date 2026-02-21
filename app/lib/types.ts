@@ -28,7 +28,7 @@ export interface Hand {
   isStanding: boolean;
 }
 
-export type PlayerAction = "hit" | "stand" | "double" | "split" | "surrender";
+export type PlayerAction = "hit" | "stand" | "double" | "split" | "surrender" | "continue";
 
 export type DoubleRestriction = "any" | "9-11" | "10-11";
 
@@ -53,6 +53,7 @@ export interface GameState {
   lastAction: PlayerAction | null;
   lastActionHand: Hand | null;
   expectedAction: PlayerAction | null;
+  lastAvailableActions?: PlayerAction[];
   isCorrect: boolean | null;
   score: { correct: number; total: number };
 }

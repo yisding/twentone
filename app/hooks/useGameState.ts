@@ -16,17 +16,17 @@ import { isBusted, isBlackjack, getDealerUpCard, getCardValue, dealCard } from "
 
 function processForcedActions(state: GameState, rules: HouseRules): GameState {
   let currentState = state;
-  
+
   while (currentState.phase === "playing") {
     const actions = getAvailableActions(currentState, rules);
     if (actions.length !== 1) break;
-    
+
     const forcedAction = actions[0];
     currentState = applyAction(currentState, forcedAction, rules, false);
-    
-    if (currentState.phase === "playing" && 
-        (isBusted(currentState.playerHands[currentState.currentHandIndex]) || 
-         currentState.playerHands[currentState.currentHandIndex].isStanding)) {
+
+    if (currentState.phase === "playing" &&
+      (isBusted(currentState.playerHands[currentState.currentHandIndex]) ||
+        currentState.playerHands[currentState.currentHandIndex].isStanding)) {
       const allResolved = currentState.playerHands.every(
         (h) => h.isStanding || isBusted(h) || h.isSurrendered
       );
@@ -35,7 +35,7 @@ function processForcedActions(state: GameState, rules: HouseRules): GameState {
       }
     }
   }
-  
+
   return currentState;
 }
 
@@ -96,9 +96,9 @@ export function useGameState(
     }
     winningsProcessedRef.current = false;
     setHasCompletedEarlySurrenderDecision(false);
-    
+
     newGame = processForcedActions(newGame, rules);
-    
+
     setGameState(newGame);
     setShowCorrectAnswer(false);
   }, [rules]);
@@ -135,7 +135,18 @@ export function useGameState(
         setHasCompletedEarlySurrenderDecision(true);
       }
 
-      let newState = applyAction(gameState, action, rules, true);
+      let newState = applyAction(gameState, action, rules, true, needsEarlySurrenderDecision);
+
+      newState.lastAvailableActions = needsEarlySurrenderDecision
+        ? ["surrender", "continue"]
+        : getAvailableActions(gameState, rules).filter((a) =>
+          !(
+            rules.surrenderAllowed === "early" &&
+            !rules.noHoleCard &&
+            hasCompletedEarlySurrenderDecision &&
+            a === "surrender"
+          )
+        );
 
       if (shouldResolveDealerBlackjackAfterEarlySurrenderDecision(gameState, rules, action)) {
         newState = {
@@ -144,9 +155,9 @@ export function useGameState(
         };
       }
 
-      if (newState.phase === "playing" && 
-          (isBusted(newState.playerHands[newState.currentHandIndex]) || 
-           newState.playerHands[newState.currentHandIndex].isStanding)) {
+      if (newState.phase === "playing" &&
+        (isBusted(newState.playerHands[newState.currentHandIndex]) ||
+          newState.playerHands[newState.currentHandIndex].isStanding)) {
         const allResolved = newState.playerHands.every(
           (h) => h.isStanding || isBusted(h) || h.isSurrendered
         );
@@ -177,13 +188,43 @@ export function useGameState(
     if (!gameState) return;
     if (!shouldPromptEarlySurrenderDecision(gameState, rules, hasCompletedEarlySurrenderDecision)) return;
 
-    setGameState({
-      ...gameState,
-      phase: isBlackjack(gameState.dealerHand) ? "resolved" : gameState.phase,
-    });
+    const currentHand = gameState.playerHands[gameState.currentHandIndex];
+    const expectedAction = getExpectedPlayableAction(gameState, rules, true);
 
+    // The action the user chose is implicitly "continue"
+    const chosenAction: PlayerAction = "continue";
+    const isCorrect = expectedAction === "continue";
+
+    if (!isCorrect && onIncorrectPlay) {
+      const dealerUpCard = getDealerUpCard(gameState.dealerHand);
+      if (dealerUpCard) {
+        onIncorrectPlay(currentHand.cards, dealerUpCard, chosenAction, expectedAction, rules);
+      }
+    }
+
+    let newState: GameState = {
+      ...gameState,
+      lastAction: chosenAction,
+      lastActionHand: { ...currentHand, cards: [...currentHand.cards] },
+      expectedAction,
+      lastAvailableActions: ["surrender", "continue"],
+      isCorrect,
+      phase: isBlackjack(gameState.dealerHand) ? "resolved" as const : gameState.phase,
+      score: isCorrect
+        ? { correct: gameState.score.correct + 1, total: gameState.score.total + 1 }
+        : { correct: gameState.score.correct, total: gameState.score.total + 1 },
+    };
+
+    if (isCorrect) {
+      onCorrectAnswer();
+    } else {
+      onWrongAnswer();
+    }
+
+    setGameState(newState);
+    setShowCorrectAnswer(true);
     setHasCompletedEarlySurrenderDecision(true);
-  }, [gameState, rules, hasCompletedEarlySurrenderDecision]);
+  }, [gameState, rules, hasCompletedEarlySurrenderDecision, onCorrectAnswer, onWrongAnswer, onIncorrectPlay]);
 
   const handleDealerPlay = useCallback(() => {
     if (!gameState || gameState.phase !== "dealer") return;
@@ -201,13 +242,13 @@ export function useGameState(
     ? shouldPromptEarlySurrenderDecision(gameState, rules, hasCompletedEarlySurrenderDecision)
       ? (["surrender"] as PlayerAction[])
       : getAvailableActions(gameState, rules).filter((action) =>
-          !(
-            rules.surrenderAllowed === "early" &&
-            !rules.noHoleCard &&
-            hasCompletedEarlySurrenderDecision &&
-            action === "surrender"
-          ),
-        )
+        !(
+          rules.surrenderAllowed === "early" &&
+          !rules.noHoleCard &&
+          hasCompletedEarlySurrenderDecision &&
+          action === "surrender"
+        ),
+      )
     : [];
 
   const needsEarlySurrenderDecision = Boolean(
@@ -249,13 +290,13 @@ function shouldPromptEarlySurrenderDecision(
   return true;
 }
 
-function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, checkStrategy: boolean): GameState {
+function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, checkStrategy: boolean, isESPrompt: boolean = false): GameState {
   const currentHand = state.playerHands[state.currentHandIndex];
-  
+
   let newState: GameState;
-  
+
   if (checkStrategy) {
-    const expectedAction = getExpectedPlayableAction(state, rules);
+    const expectedAction = getExpectedPlayableAction(state, rules, isESPrompt);
     const isCorrect = action === expectedAction;
     newState = {
       ...state,
@@ -303,9 +344,14 @@ function shouldResolveDealerBlackjackAfterEarlySurrenderDecision(
   return isBlackjack(state.dealerHand);
 }
 
-function getExpectedPlayableAction(state: GameState, rules: HouseRules): PlayerAction {
+function getExpectedPlayableAction(state: GameState, rules: HouseRules, isESPrompt: boolean = false): PlayerAction {
   const hand = state.playerHands[state.currentHandIndex];
   const expectedAction = getBasicStrategyAction(hand, state.dealerHand, rules);
+
+  if (isESPrompt) {
+    return expectedAction === "surrender" ? "surrender" : "continue";
+  }
+
   const availableActions = getAvailableActions(state, rules);
 
   if (availableActions.includes(expectedAction)) {

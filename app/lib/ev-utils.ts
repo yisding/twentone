@@ -365,7 +365,7 @@ export function computeActionEVs(
 
   const dealerValue = getCardValue(dealerUpCard);
   const isPair = playerHand.cards.length === 2 &&
-                 playerHand.cards[0].rank === playerHand.cards[1].rank;
+    playerHand.cards[0].rank === playerHand.cards[1].rank;
   const pairValue = isPair ? getCardValue(playerHand.cards[0]) : null;
   const isTwoCardHand = playerHand.cards.length === 2;
   const dblAllowed =
@@ -381,6 +381,7 @@ export function computeActionEVs(
   let hitEV: number;
   let dblEV = 0;
   let splitEv = 0;
+  let pDealerBJ = 0;
 
   if (useCD) {
     // Composition-dependent: track shoe through every draw
@@ -405,6 +406,7 @@ export function computeActionEVs(
     const shouldConditionHoleCard = !rules.noHoleCard && forbiddenHoleIdx >= 0;
 
     if (shouldConditionHoleCard) {
+      pDealerBJ = shoe[forbiddenHoleIdx] / st;
       // Peek game with a 10/A upcard: condition on the revealed fact that dealer
       // does not have blackjack by explicitly averaging over legal hole cards.
       // This improves CD decision EV accuracy because player-draw probabilities
@@ -475,6 +477,12 @@ export function computeActionEVs(
     infHitMemo.clear();
     infOptMemo.clear();
 
+    const forbiddenHoleIdx = dealerValue === 11 ? 8 : dealerValue === 10 ? 9 : -1;
+    const shouldConditionHoleCard = !rules.noHoleCard && forbiddenHoleIdx >= 0;
+    if (shouldConditionHoleCard) {
+      pDealerBJ = infProbs[forbiddenHoleIdx];
+    }
+
     const dd = infDealerDist(dealerValue, rules.hitSoft17);
     const ddKey = `${dealerValue}-${rules.hitSoft17}`;
 
@@ -494,6 +502,20 @@ export function computeActionEVs(
   results.push({ action: "double", ev: dblEV, isAvailable: dblAllowed });
   results.push({ action: "split", ev: splitEv, isAvailable: splitAllowed });
   results.push({ action: "surrender", ev: -0.5, isAvailable: surrAllowed });
+
+  // Add the "continue" pseudo-action (the maximum EV of playing out the hand)
+  let continueEV = Math.max(
+    standEV,
+    hitEV,
+    dblAllowed ? dblEV : -Infinity,
+    splitAllowed ? splitEv : -Infinity
+  );
+
+  if (rules.surrenderAllowed === "early" && pDealerBJ > 0 && isTwoCardHand && !playerHand.isSplit) {
+    continueEV = pDealerBJ * (-1) + (1 - pDealerBJ) * continueEV;
+  }
+
+  results.push({ action: "continue", ev: continueEV, isAvailable: true });
 
   return results;
 }
@@ -522,8 +544,12 @@ export function computeAvailableActionEVs(
   dealerHand: Hand,
   rules: HouseRules,
   strategyTable?: StrategyTable | null,
+  validActionLabels?: PlayerAction[],
 ): ActionEV[] {
-  const available = computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
+  let available = computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
+  if (validActionLabels && validActionLabels.length > 0) {
+    available = available.filter(a => validActionLabels.includes(a.action));
+  }
 
   // For pairs with a strategy table, use the strategy table's EVs which are
   // computed with full composition-dependent tracking from the strategy table
@@ -553,12 +579,14 @@ export function computeEVCost(
   chosenAction: PlayerAction,
   rules: HouseRules,
   strategyTable?: StrategyTable | null,
+  validActionLabels?: PlayerAction[],
 ): EVCostInfo | null {
   const availableActions = computeAvailableActionEVs(
     playerHand,
     dealerHand,
     rules,
     strategyTable,
+    validActionLabels
   );
   if (availableActions.length === 0) return null;
 

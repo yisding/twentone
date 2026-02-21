@@ -98,6 +98,7 @@ export function GameArea({
           dealerHand={gameState.dealerHand}
           rules={rules}
           strategyTable={strategyTable}
+          lastAvailableActions={gameState.lastAvailableActions}
         />
       )}
 
@@ -215,6 +216,7 @@ function FeedbackMessage({
   dealerHand,
   rules,
   strategyTable,
+  lastAvailableActions,
 }: {
   isCorrect: boolean;
   expectedAction: PlayerAction;
@@ -223,18 +225,19 @@ function FeedbackMessage({
   dealerHand: HandType;
   rules: HouseRules;
   strategyTable?: StrategyTable | null;
+  lastAvailableActions?: PlayerAction[];
 }) {
   const message = isCorrect
     ? "Correct!"
     : `Incorrect. The correct play was ${actionToString(expectedAction)}.`;
 
   const actionEVs = actedHand
-    ? computeAvailableActionEVs(actedHand, dealerHand, rules, strategyTable)
+    ? computeAvailableActionEVs(actedHand, dealerHand, rules, strategyTable, lastAvailableActions)
       .sort((a, b) => b.ev - a.ev)
     : [];
 
   const evCost = !isCorrect && actedHand
-    ? computeEVCost(actedHand, dealerHand, lastAction, rules, strategyTable)
+    ? computeEVCost(actedHand, dealerHand, lastAction, rules, strategyTable, lastAvailableActions)
     : null;
 
   return (
