@@ -48,6 +48,7 @@ export function useGameState(
 ) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+  const [hasCompletedEarlySurrenderDecision, setHasCompletedEarlySurrenderDecision] = useState(false);
   const winningsProcessedRef = useRef(false);
 
   useEffect(() => {
@@ -94,6 +95,7 @@ export function useGameState(
       }
     }
     winningsProcessedRef.current = false;
+    setHasCompletedEarlySurrenderDecision(false);
     
     newGame = processForcedActions(newGame, rules);
     
@@ -105,6 +107,19 @@ export function useGameState(
     (action: PlayerAction) => {
       if (!gameState || gameState.phase !== "playing") return;
 
+      const needsEarlySurrenderDecision = shouldPromptEarlySurrenderDecision(
+        gameState,
+        rules,
+        hasCompletedEarlySurrenderDecision,
+      );
+
+      if (
+        action !== "surrender" &&
+        needsEarlySurrenderDecision
+      ) {
+        return;
+      }
+
       const currentHand = gameState.playerHands[gameState.currentHandIndex];
       const expectedAction = getExpectedPlayableAction(gameState, rules);
       const isCorrect = action === expectedAction;
@@ -114,6 +129,10 @@ export function useGameState(
         if (dealerUpCard) {
           onIncorrectPlay(currentHand.cards, dealerUpCard, action, expectedAction, rules);
         }
+      }
+
+      if (action === "surrender" && needsEarlySurrenderDecision) {
+        setHasCompletedEarlySurrenderDecision(true);
       }
 
       let newState = applyAction(gameState, action, rules, true);
@@ -151,8 +170,20 @@ export function useGameState(
       setGameState(newState);
       setShowCorrectAnswer(true);
     },
-    [gameState, rules, onCorrectAnswer, onWrongAnswer, onIncorrectPlay],
+    [gameState, rules, onCorrectAnswer, onWrongAnswer, onIncorrectPlay, hasCompletedEarlySurrenderDecision],
   );
+
+  const declineEarlySurrender = useCallback(() => {
+    if (!gameState) return;
+    if (!shouldPromptEarlySurrenderDecision(gameState, rules, hasCompletedEarlySurrenderDecision)) return;
+
+    setGameState({
+      ...gameState,
+      phase: isBlackjack(gameState.dealerHand) ? "resolved" : gameState.phase,
+    });
+
+    setHasCompletedEarlySurrenderDecision(true);
+  }, [gameState, rules, hasCompletedEarlySurrenderDecision]);
 
   const handleDealerPlay = useCallback(() => {
     if (!gameState || gameState.phase !== "dealer") return;
@@ -166,9 +197,22 @@ export function useGameState(
     setGameState(newState);
   }, [gameState, rules]);
 
-  const availableActions = gameState?.phase === "playing"
-    ? getAvailableActions(gameState, rules)
+  const availableActions: PlayerAction[] = gameState?.phase === "playing"
+    ? shouldPromptEarlySurrenderDecision(gameState, rules, hasCompletedEarlySurrenderDecision)
+      ? (["surrender"] as PlayerAction[])
+      : getAvailableActions(gameState, rules).filter((action) =>
+          !(
+            rules.surrenderAllowed === "early" &&
+            !rules.noHoleCard &&
+            hasCompletedEarlySurrenderDecision &&
+            action === "surrender"
+          ),
+        )
     : [];
+
+  const needsEarlySurrenderDecision = Boolean(
+    gameState && shouldPromptEarlySurrenderDecision(gameState, rules, hasCompletedEarlySurrenderDecision),
+  );
 
   return {
     gameState,
@@ -176,9 +220,33 @@ export function useGameState(
     startNewGame,
     handleAction,
     handleDealerPlay,
+    declineEarlySurrender,
     nextHand,
     availableActions,
+    needsEarlySurrenderDecision,
   };
+}
+
+function shouldPromptEarlySurrenderDecision(
+  state: GameState,
+  rules: HouseRules,
+  hasCompletedEarlySurrenderDecision: boolean,
+): boolean {
+  if (hasCompletedEarlySurrenderDecision) return false;
+  if (state.phase !== "playing") return false;
+  if (rules.surrenderAllowed !== "early") return false;
+  if (rules.noHoleCard) return false;
+  if (state.currentHandIndex !== 0 || state.playerHands.length !== 1) return false;
+
+  const hand = state.playerHands[0];
+  const dealerUpCard = getDealerUpCard(state.dealerHand);
+  const dealerUpCardValue = dealerUpCard ? getCardValue(dealerUpCard) : 0;
+
+  if (state.dealerHand.cards.length !== 2) return false;
+  if (hand.cards.length !== 2 || hand.isSplit) return false;
+  if (dealerUpCardValue !== 10 && dealerUpCardValue !== 11) return false;
+
+  return true;
 }
 
 function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, checkStrategy: boolean): GameState {

@@ -16,7 +16,9 @@ interface GameAreaProps {
   currentHand: HandType | undefined;
   showCorrectAnswer: boolean;
   availableActions: PlayerAction[];
+  needsEarlySurrenderDecision: boolean;
   onAction: (action: PlayerAction) => void;
+  onDeclineEarlySurrender: () => void;
   onDealerPlay: () => void;
   onNextHand: () => void;
   onNewGame: () => void;
@@ -29,7 +31,9 @@ export function GameArea({
   currentHand,
   showCorrectAnswer,
   availableActions,
+  needsEarlySurrenderDecision,
   onAction,
+  onDeclineEarlySurrender,
   onDealerPlay,
   onNextHand,
   onNewGame,
@@ -77,7 +81,12 @@ export function GameArea({
         !isBusted(currentHand) &&
         !currentHand.isStanding &&
         !currentHand.isSurrendered && (
-          <ActionButtons actions={availableActions} onAction={onAction} />
+          <ActionButtons
+            actions={availableActions}
+            onAction={onAction}
+            needsEarlySurrenderDecision={needsEarlySurrenderDecision}
+            onDeclineEarlySurrender={onDeclineEarlySurrender}
+          />
         )}
 
       {showCorrectAnswer && gameState.lastAction && gameState.expectedAction && (
@@ -155,12 +164,21 @@ function BlackjackResult({
 function ActionButtons({
   actions,
   onAction,
+  needsEarlySurrenderDecision,
+  onDeclineEarlySurrender,
 }: {
   actions: PlayerAction[];
   onAction: (action: PlayerAction) => void;
+  needsEarlySurrenderDecision: boolean;
+  onDeclineEarlySurrender: () => void;
 }) {
   return (
     <div className="space-y-4">
+      {needsEarlySurrenderDecision && (
+        <p className="text-center text-sm text-muted-foreground">
+          Early surrender decision: surrender now or continue the hand.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2 justify-center">
         {actions.map((action) => (
           <Button
@@ -174,6 +192,16 @@ function ActionButtons({
             {actionToString(action)}
           </Button>
         ))}
+        {needsEarlySurrenderDecision && (
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={onDeclineEarlySurrender}
+            aria-label="Continue hand"
+          >
+            Continue Hand
+          </Button>
+        )}
       </div>
     </div>
   );

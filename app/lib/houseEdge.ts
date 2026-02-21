@@ -1,4 +1,5 @@
 import { HouseRules } from "./types";
+import { isEarlySurrender } from "./surrender";
 
 export function calculateHouseEdge(rules: HouseRules): number {
   let edge = 0.43;
@@ -42,7 +43,7 @@ export function calculateHouseEdge(rules: HouseRules): number {
 
   if (rules.surrenderAllowed === "none") {
     edge += 0.07;
-  } else if (rules.surrenderAllowed === "early") {
+  } else if (isEarlySurrender(rules)) {
     edge -= 0.63;
   }
 
