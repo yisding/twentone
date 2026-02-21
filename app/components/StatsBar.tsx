@@ -16,8 +16,8 @@ export function StatsBar({ stats, rules, onReset }: StatsBarProps) {
   const formattedWinnings = stats.winnings.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 
   return (
