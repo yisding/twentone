@@ -358,6 +358,7 @@ export function computeActionEVs(
   playerHand: Hand,
   dealerHand: Hand,
   rules: HouseRules,
+  includeContinueAction: boolean = false,
 ): ActionEV[] {
   const { total, isSoft } = calculateHandValue(playerHand);
   const dealerUpCard = getDealerUpCard(dealerHand);
@@ -503,19 +504,21 @@ export function computeActionEVs(
   results.push({ action: "split", ev: splitEv, isAvailable: splitAllowed });
   results.push({ action: "surrender", ev: -0.5, isAvailable: surrAllowed });
 
-  // Add the "continue" pseudo-action (the maximum EV of playing out the hand)
-  let continueEV = Math.max(
-    standEV,
-    hitEV,
-    dblAllowed ? dblEV : -Infinity,
-    splitAllowed ? splitEv : -Infinity
-  );
+  if (includeContinueAction) {
+    // Add the "continue" pseudo-action (the maximum EV of playing out the hand)
+    let continueEV = Math.max(
+      standEV,
+      hitEV,
+      dblAllowed ? dblEV : -Infinity,
+      splitAllowed ? splitEv : -Infinity
+    );
 
-  if (rules.surrenderAllowed === "early" && pDealerBJ > 0 && isTwoCardHand && !playerHand.isSplit) {
-    continueEV = pDealerBJ * (-1) + (1 - pDealerBJ) * continueEV;
+    if (rules.surrenderAllowed === "early" && pDealerBJ > 0 && isTwoCardHand && !playerHand.isSplit) {
+      continueEV = pDealerBJ * (-1) + (1 - pDealerBJ) * continueEV;
+    }
+
+    results.push({ action: "continue", ev: continueEV, isAvailable: true });
   }
-
-  results.push({ action: "continue", ev: continueEV, isAvailable: true });
 
   return results;
 }
@@ -546,7 +549,8 @@ export function computeAvailableActionEVs(
   strategyTable?: StrategyTable | null,
   validActionLabels?: PlayerAction[],
 ): ActionEV[] {
-  let available = computeActionEVs(playerHand, dealerHand, rules).filter(a => a.isAvailable);
+  const includeContinueAction = Boolean(validActionLabels?.includes("continue"));
+  let available = computeActionEVs(playerHand, dealerHand, rules, includeContinueAction).filter(a => a.isAvailable);
   if (validActionLabels && validActionLabels.length > 0) {
     available = available.filter(a => validActionLabels.includes(a.action));
   }

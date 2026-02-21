@@ -121,7 +121,7 @@ export function useGameState(
       }
 
       const currentHand = gameState.playerHands[gameState.currentHandIndex];
-      const expectedAction = getExpectedPlayableAction(gameState, rules);
+      const expectedAction = getExpectedPlayableAction(gameState, rules, needsEarlySurrenderDecision);
       const isCorrect = action === expectedAction;
 
       if (!isCorrect && onIncorrectPlay) {
@@ -202,7 +202,7 @@ export function useGameState(
       }
     }
 
-    let newState: GameState = {
+    const newState: GameState = {
       ...gameState,
       lastAction: chosenAction,
       lastActionHand: { ...currentHand, cards: [...currentHand.cards] },
