@@ -45,6 +45,8 @@ export function calculateHouseEdge(rules: HouseRules): number {
     edge += 0.07;
   } else if (isEarlySurrender(rules)) {
     edge -= 0.63;
+  } else if (rules.surrenderAllowed === "enhcNoAce") {
+    edge -= 0.18;
   }
 
   if (rules.resplitAces) {
@@ -52,7 +54,7 @@ export function calculateHouseEdge(rules: HouseRules): number {
   }
 
   if (rules.noHoleCard) {
-    edge += 0.11;
+    edge += 0.06;
   }
 
   if (rules.maxSplitHands === 3) {
