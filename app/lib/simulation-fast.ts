@@ -132,30 +132,18 @@ interface RuleConstants {
   isDAS: boolean;
   isSingleOrDoubleDeck: boolean;
   doubleRestriction: string;
+  doubleRestrictionMode: 0 | 1 | 2; // 0:any, 1:9-11, 2:10-11
   resplitAces: boolean;
   maxSplitHands: number;
   noHoleCard: boolean;
   bjPayMultiplier: number;
   minCards: number;
   decks: number;
-}
-
-function precomputeRules(rules: HouseRules): RuleConstants {
-  return {
-    hitSoft17: rules.hitSoft17,
-    canSurrender: rules.surrenderAllowed !== "none",
-    isEarlySurrender: isEarlySurrender(rules),
-    blockSurrenderVsAce: rules.surrenderAllowed === "enhcNoAce",
-    isDAS: rules.doubleAfterSplit,
-    isSingleOrDoubleDeck: rules.decks <= 2,
-    doubleRestriction: rules.doubleRestriction,
-    resplitAces: rules.resplitAces,
-    maxSplitHands: rules.maxSplitHands,
-    noHoleCard: rules.noHoleCard,
-    bjPayMultiplier: rules.blackjackPays === "3:2" ? 1.5 : rules.blackjackPays === "6:5" ? 1.2 : 1,
-    minCards: (52 * rules.decks * 0.25) | 0,
-    decks: rules.decks,
-  };
+  hardTableNoDouble: Uint8Array;
+  hardTableCanDouble: Uint8Array;
+  softTableNoDouble: Uint8Array;
+  softTableCanDouble: Uint8Array;
+  pairTable: Uint8Array;
 }
 
 // --- Inlined strategy ---
@@ -169,6 +157,141 @@ const enum Action {
   Surrender = 4,
 }
 
+const DEALER_DIM = 12;
+const TOTAL_DIM = 22;
+
+function tableIndex(totalOrPair: number, dealerUpValue: number): number {
+  return totalOrPair * DEALER_DIM + dealerUpValue;
+}
+
+function buildHardTables(): { noDouble: Uint8Array; canDouble: Uint8Array } {
+  const noDouble = new Uint8Array(TOTAL_DIM * DEALER_DIM);
+  const canDouble = new Uint8Array(TOTAL_DIM * DEALER_DIM);
+  noDouble.fill(Action.Hit);
+  canDouble.fill(Action.Hit);
+
+  for (let dealer = 2; dealer <= 11; dealer++) {
+    for (let total = 17; total <= 21; total++) {
+      noDouble[tableIndex(total, dealer)] = Action.Stand;
+      canDouble[tableIndex(total, dealer)] = Action.Stand;
+    }
+
+    for (let total = 13; total <= 16; total++) {
+      const action = dealer <= 6 ? Action.Stand : Action.Hit;
+      noDouble[tableIndex(total, dealer)] = action;
+      canDouble[tableIndex(total, dealer)] = action;
+    }
+
+    const hard12Action = dealer >= 4 && dealer <= 6 ? Action.Stand : Action.Hit;
+    noDouble[tableIndex(12, dealer)] = hard12Action;
+    canDouble[tableIndex(12, dealer)] = hard12Action;
+
+    noDouble[tableIndex(11, dealer)] = Action.Hit;
+    canDouble[tableIndex(11, dealer)] = Action.Double;
+
+    noDouble[tableIndex(10, dealer)] = Action.Hit;
+    canDouble[tableIndex(10, dealer)] = dealer <= 9 ? Action.Double : Action.Hit;
+
+    noDouble[tableIndex(9, dealer)] = Action.Hit;
+    canDouble[tableIndex(9, dealer)] = dealer >= 3 && dealer <= 6 ? Action.Double : Action.Hit;
+  }
+
+  return { noDouble, canDouble };
+}
+
+function buildSoftTables(hitSoft17: boolean): { noDouble: Uint8Array; canDouble: Uint8Array } {
+  const noDouble = new Uint8Array(TOTAL_DIM * DEALER_DIM);
+  const canDouble = new Uint8Array(TOTAL_DIM * DEALER_DIM);
+  noDouble.fill(Action.Hit);
+  canDouble.fill(Action.Hit);
+
+  for (let dealer = 2; dealer <= 11; dealer++) {
+    for (let total = 19; total <= 21; total++) {
+      noDouble[tableIndex(total, dealer)] = Action.Stand;
+      canDouble[tableIndex(total, dealer)] = Action.Stand;
+    }
+
+    noDouble[tableIndex(18, dealer)] = dealer >= 9 ? Action.Hit : Action.Stand;
+    canDouble[tableIndex(18, dealer)] = dealer >= 9 ? Action.Hit : dealer >= 7 ? Action.Stand : Action.Double;
+
+    noDouble[tableIndex(17, dealer)] = Action.Hit;
+    canDouble[tableIndex(17, dealer)] = dealer >= 3 && dealer <= 6 ? Action.Double : Action.Hit;
+
+    noDouble[tableIndex(16, dealer)] = Action.Hit;
+    noDouble[tableIndex(15, dealer)] = Action.Hit;
+    canDouble[tableIndex(16, dealer)] = dealer >= 4 && dealer <= 6 ? Action.Double : Action.Hit;
+    canDouble[tableIndex(15, dealer)] = dealer >= 4 && dealer <= 6 ? Action.Double : Action.Hit;
+
+    noDouble[tableIndex(14, dealer)] = Action.Hit;
+    noDouble[tableIndex(13, dealer)] = Action.Hit;
+    canDouble[tableIndex(14, dealer)] = dealer >= 5 && dealer <= 6 ? Action.Double : Action.Hit;
+    canDouble[tableIndex(13, dealer)] = dealer >= 5 && dealer <= 6 ? Action.Double : Action.Hit;
+  }
+
+  if (hitSoft17) {
+    canDouble[tableIndex(19, 6)] = Action.Double;
+    canDouble[tableIndex(18, 2)] = Action.Double;
+  }
+
+  return { noDouble, canDouble };
+}
+
+function buildPairTable(isDAS: boolean, isSingleOrDoubleDeck: boolean): Uint8Array {
+  const pairTable = new Uint8Array(TOTAL_DIM * DEALER_DIM);
+  pairTable.fill(Action.Hit);
+
+  for (let dealer = 2; dealer <= 11; dealer++) {
+    pairTable[tableIndex(11, dealer)] = Action.Split;
+    pairTable[tableIndex(10, dealer)] = Action.Stand;
+    pairTable[tableIndex(9, dealer)] =
+      dealer === 7 || dealer === 10 || dealer === 11 ? Action.Stand : Action.Split;
+    pairTable[tableIndex(8, dealer)] = Action.Split;
+    pairTable[tableIndex(7, dealer)] =
+      dealer <= 7 || (dealer === 8 && isSingleOrDoubleDeck) ? Action.Split : Action.Hit;
+    pairTable[tableIndex(6, dealer)] =
+      isDAS ? (dealer >= 2 && dealer <= 6 ? Action.Split : Action.Hit) :
+        (dealer >= 3 && dealer <= 6 ? Action.Split : Action.Hit);
+    pairTable[tableIndex(5, dealer)] = dealer <= 9 ? Action.Double : Action.Hit;
+    pairTable[tableIndex(4, dealer)] = isDAS && (dealer === 5 || dealer === 6) ? Action.Split : Action.Hit;
+    const lowPairAction = isDAS ? (dealer >= 2 && dealer <= 7 ? Action.Split : Action.Hit) :
+      (dealer >= 4 && dealer <= 7 ? Action.Split : Action.Hit);
+    pairTable[tableIndex(3, dealer)] = lowPairAction;
+    pairTable[tableIndex(2, dealer)] = lowPairAction;
+  }
+
+  return pairTable;
+}
+
+function precomputeRules(rules: HouseRules): RuleConstants {
+  const doubleRestrictionMode =
+    rules.doubleRestriction === "any" ? 0 :
+    rules.doubleRestriction === "9-11" ? 1 : 2;
+  const hardTables = buildHardTables();
+  const softTables = buildSoftTables(rules.hitSoft17);
+
+  return {
+    hitSoft17: rules.hitSoft17,
+    canSurrender: rules.surrenderAllowed !== "none",
+    isEarlySurrender: isEarlySurrender(rules),
+    blockSurrenderVsAce: rules.surrenderAllowed === "enhcNoAce",
+    isDAS: rules.doubleAfterSplit,
+    isSingleOrDoubleDeck: rules.decks <= 2,
+    doubleRestriction: rules.doubleRestriction,
+    doubleRestrictionMode,
+    resplitAces: rules.resplitAces,
+    maxSplitHands: rules.maxSplitHands,
+    noHoleCard: rules.noHoleCard,
+    bjPayMultiplier: rules.blackjackPays === "3:2" ? 1.5 : rules.blackjackPays === "6:5" ? 1.2 : 1,
+    minCards: (52 * rules.decks * 0.25) | 0,
+    decks: rules.decks,
+    hardTableNoDouble: hardTables.noDouble,
+    hardTableCanDouble: hardTables.canDouble,
+    softTableNoDouble: softTables.noDouble,
+    softTableCanDouble: softTables.canDouble,
+    pairTable: buildPairTable(rules.doubleAfterSplit, rules.decks <= 2),
+  };
+}
+
 function getStrategyAction(
   hand: SimHand,
   dealerUpValue: number, // 2-11 (ace=11)
@@ -179,15 +302,7 @@ function getStrategyAction(
   // Pair strategy
   if (hand.isPair) {
     const pairVal = hand.firstCardValue; // RANK_VALUE already maps A->11
-
-    if (pairVal === 11) return Action.Split; // Always split aces
-
-    if (pairVal === 10) return Action.Stand;
-
-    if (pairVal === 9) {
-      if (dealerUpValue === 7 || dealerUpValue === 10 || dealerUpValue === 11) return Action.Stand;
-      return Action.Split;
-    }
+    const pairAction = rc.pairTable[tableIndex(pairVal, dealerUpValue)];
 
     if (pairVal === 8) {
       if (canSurrenderHand) {
@@ -198,96 +313,44 @@ function getStrategyAction(
           return Action.Surrender;
         }
       }
-      return Action.Split;
+      return pairAction;
     }
 
     if (pairVal === 7) {
       if (canSurrenderHand && rc.isEarlySurrender && (dealerUpValue === 10 || dealerUpValue === 11)) {
         return Action.Surrender;
       }
-      if (dealerUpValue <= 7) return Action.Split;
-      if (dealerUpValue === 8 && rc.isSingleOrDoubleDeck) return Action.Split;
-      return Action.Hit;
+      return pairAction;
     }
 
     if (pairVal === 6) {
       if (canSurrenderHand && rc.isEarlySurrender && dealerUpValue === 11) {
         return Action.Surrender;
       }
-      if (rc.isDAS) {
-        if (dealerUpValue >= 2 && dealerUpValue <= 6) return Action.Split;
-      } else {
-        if (dealerUpValue >= 3 && dealerUpValue <= 6) return Action.Split;
-      }
-      return Action.Hit;
-    }
-
-    if (pairVal === 5) {
-      // Pair of 5s: treat as hard 10, double or hit (never split)
-      if (dealerUpValue <= 9 && hand.cardCount === 2) return Action.Double;
-      return Action.Hit;
-    }
-
-    if (pairVal === 4) {
-      if (rc.isDAS && (dealerUpValue === 5 || dealerUpValue === 6)) return Action.Split;
-      return Action.Hit;
+      return pairAction;
     }
 
     if (pairVal === 3 || pairVal === 2) {
       if (pairVal === 3 && canSurrenderHand && rc.isEarlySurrender && dealerUpValue === 11) {
         return Action.Surrender;
       }
-      if (rc.isDAS) {
-        if (dealerUpValue >= 2 && dealerUpValue <= 7) return Action.Split;
-      } else {
-        if (dealerUpValue >= 4 && dealerUpValue <= 7) return Action.Split;
-      }
-      return Action.Hit;
+      return pairAction;
     }
+
+    return pairAction;
   }
 
   const total = hand.total;
   const canDouble =
     hand.cardCount === 2 &&
     (!hand.isSplit || rc.isDAS) &&
-    (rc.doubleRestriction === "any" ||
-      (rc.doubleRestriction === "9-11" && total >= 9 && total <= 11) ||
-      (rc.doubleRestriction === "10-11" && total >= 10 && total <= 11));
+    (rc.doubleRestrictionMode === 0 ||
+      (rc.doubleRestrictionMode === 1 && total >= 9 && total <= 11) ||
+      (rc.doubleRestrictionMode === 2 && total >= 10 && total <= 11));
 
   // Soft total strategy
   if (hand.isSoft && total <= 21) {
-    if (total >= 19) {
-      if (rc.hitSoft17 && total === 19 && dealerUpValue === 6 && canDouble) return Action.Double;
-      return Action.Stand;
-    }
-
-    if (total === 18) {
-      if (dealerUpValue >= 9) return Action.Hit;
-      if (dealerUpValue === 7 || dealerUpValue === 8) return Action.Stand;
-      if (dealerUpValue <= 6) {
-        if (rc.hitSoft17 && dealerUpValue === 2 && canDouble) return Action.Double;
-        if (dealerUpValue >= 3 && canDouble) return Action.Double;
-        return Action.Stand;
-      }
-      return Action.Stand;
-    }
-
-    if (total === 17) {
-      if (dealerUpValue >= 3 && dealerUpValue <= 6 && canDouble) return Action.Double;
-      return Action.Hit;
-    }
-
-    if (total === 16 || total === 15) {
-      if (dealerUpValue >= 4 && dealerUpValue <= 6 && canDouble) return Action.Double;
-      return Action.Hit;
-    }
-
-    if (total === 14 || total === 13) {
-      if (dealerUpValue >= 5 && dealerUpValue <= 6 && canDouble) return Action.Double;
-      return Action.Hit;
-    }
-
-    return Action.Hit;
+    return (canDouble ? rc.softTableCanDouble : rc.softTableNoDouble)[tableIndex(total, dealerUpValue)];
   }
 
   // Hard total strategy
@@ -311,95 +374,11 @@ function getStrategyAction(
     }
   }
 
-  if (total >= 17) return Action.Stand;
-
-  if (total >= 13 && total <= 16) {
-    if (dealerUpValue <= 6) return Action.Stand;
+  if (total === 11 && canDouble && !rc.hitSoft17 && dealerUpValue === 11 && !rc.isSingleOrDoubleDeck) {
     return Action.Hit;
   }
 
-  if (total === 12) {
-    if (dealerUpValue >= 4 && dealerUpValue <= 6) return Action.Stand;
-    return Action.Hit;
-  }
-
-  if (total === 11) {
-    if (canDouble) {
-      if (rc.hitSoft17) return Action.Double;
-      if (dealerUpValue !== 11) return Action.Double;
-      if (rc.isSingleOrDoubleDeck) return Action.Double;
-    }
-    return Action.Hit;
-  }
-
-  if (total === 10) {
-    if (dealerUpValue <= 9 && canDouble) return Action.Double;
-    return Action.Hit;
-  }
-
-  if (total === 9) {
-    if (dealerUpValue >= 3 && dealerUpValue <= 6 && canDouble) return Action.Double;
-    return Action.Hit;
-  }
-
-  return Action.Hit;
-}
-
-// --- Inlined action validation ---
-// Returns the action to actually execute, falling back when requested action is unavailable
-
-function validateAction(
-  action: Action,
-  hand: SimHand,
-  numHands: number,
-  dealerUpValue: number,
-  rc: RuleConstants,
-): Action {
-  if (action === Action.Hit || action === Action.Stand) return action;
-
-  if (action === Action.Surrender) {
-    // Surrender requires: allowed by rules, 2 cards, not split
-    const canSurrenderByUpCard =
-      rc.canSurrender &&
-      (!rc.blockSurrenderVsAce || dealerUpValue !== 11);
-
-    if (canSurrenderByUpCard && hand.cardCount === 2 && !hand.isSplit) return Action.Surrender;
-    return Action.Stand;
-  }
-
-  if (action === Action.Double) {
-    if (hand.cardCount !== 2 || hand.isDoubledDown) return Action.Hit;
-
-    const total = hand.total;
-    let canDoubleByRestriction = false;
-    if (rc.doubleRestriction === "any") {
-      canDoubleByRestriction = true;
-    } else if (rc.doubleRestriction === "9-11") {
-      canDoubleByRestriction = total >= 9 && total <= 11;
-    } else if (rc.doubleRestriction === "10-11") {
-      canDoubleByRestriction = total >= 10 && total <= 11;
-    }
-
-    if (!canDoubleByRestriction) return Action.Hit;
-    if (hand.isSplit && !rc.isDAS) return Action.Hit;
-
-    return Action.Double;
-  }
-
-  if (action === Action.Split) {
-    if (hand.cardCount !== 2 || hand.cards[0] !== hand.cards[1]) return Action.Hit;
-    if (numHands >= rc.maxSplitHands) return Action.Hit;
-    // Split aces re-split check
-    if (hand.isSplitAces) {
-      if (hand.cards[0] === 1 && hand.cards[1] === 1 && rc.resplitAces && numHands < rc.maxSplitHands) {
-        return Action.Split;
-      }
-      return Action.Stand;
-    }
-    return Action.Split;
-  }
-
-  return Action.Stand;
+  return (canDouble ? rc.hardTableCanDouble : rc.hardTableNoDouble)[tableIndex(total, dealerUpValue)];
 }
 
 // --- Simulation Result ---
@@ -509,7 +488,7 @@ export function simulateHouseEdge(
         totalReturned += bet;
         pushes++;
       }
-      if (onProgress && i % 1000 === 0) onProgress(i, numHands);
+      if (onProgress && (i & 1023) === 0) onProgress(i, numHands);
       continue;
     }
 
@@ -519,6 +498,8 @@ export function simulateHouseEdge(
 
     // Track which pool slots are active hands
     // playerHand is pool.get(0), splits go to pool.get(1), pool.get(2), etc.
+
+    const dealerUpValue = RANK_VALUE[dealerHand.cards[0]];
 
     while (currentHandIndex < numPlayerHands) {
       const hand = pool.get(currentHandIndex);
@@ -556,44 +537,62 @@ export function simulateHouseEdge(
       }
 
       while (!hand.isStanding && !hand.isSurrendered && !hand.isBusted) {
-        const dealerUpValue = RANK_VALUE[dealerHand.cards[0]];
         const action = getStrategyAction(hand, dealerUpValue, rc);
-        const validated = validateAction(action, hand, numPlayerHands, dealerUpValue, rc);
 
-        if (validated !== action) {
-          if ((action === Action.Double || action === Action.Split) && validated === Action.Hit) {
-            // Double/split not available -> hit and continue playing
-            hand.addCard(drawRank());
-            continue;
-          }
-          // Other fallback: stand
+        if (action === Action.Stand) {
           hand.isStanding = true;
           break;
         }
 
-        if (validated === Action.Stand) {
-          hand.isStanding = true;
-          break;
-        }
-
-        if (validated === Action.Surrender) {
-          hand.isSurrendered = true;
-          break;
-        }
-
-        if (validated === Action.Hit) {
+        if (action === Action.Hit) {
           hand.addCard(drawRank());
           continue;
         }
 
-        if (validated === Action.Double) {
-          hand.addCard(drawRank());
-          hand.isDoubledDown = true;
+        if (action === Action.Surrender) {
+          const canSurrenderByUpCard = rc.canSurrender && (!rc.blockSurrenderVsAce || dealerUpValue !== 11);
+          if (canSurrenderByUpCard && hand.cardCount === 2 && !hand.isSplit) {
+            hand.isSurrendered = true;
+            break;
+          }
           hand.isStanding = true;
           break;
         }
 
-        if (validated === Action.Split) {
+        if (action === Action.Double) {
+          const total = hand.total;
+          const canDoubleByRestriction =
+            rc.doubleRestrictionMode === 0 ||
+            (rc.doubleRestrictionMode === 1 && total >= 9 && total <= 11) ||
+            (rc.doubleRestrictionMode === 2 && total >= 10 && total <= 11);
+
+          if (
+            hand.cardCount === 2 &&
+            !hand.isDoubledDown &&
+            canDoubleByRestriction &&
+            (!hand.isSplit || rc.isDAS)
+          ) {
+            hand.addCard(drawRank());
+            hand.isDoubledDown = true;
+            hand.isStanding = true;
+            break;
+          }
+
+          hand.addCard(drawRank());
+          continue;
+        }
+
+        if (action === Action.Split) {
+          if (hand.cardCount !== 2 || hand.cards[0] !== hand.cards[1] || numPlayerHands >= rc.maxSplitHands) {
+            hand.addCard(drawRank());
+            continue;
+          }
+
+          if (hand.isSplitAces && (!rc.resplitAces || hand.cards[0] !== 1 || hand.cards[1] !== 1)) {
+            hand.isStanding = true;
+            break;
+          }
+
           const card1Rank = hand.cards[0];
           const card2Rank = hand.cards[1];
           const isSplittingAces = card1Rank === 1;
@@ -618,6 +617,9 @@ export function simulateHouseEdge(
           numPlayerHands++;
           continue;
         }
+
+        hand.isStanding = true;
+        break;
       }
 
       currentHandIndex++;
@@ -713,7 +715,7 @@ export function simulateHouseEdge(
       losses++;
     }
 
-    if (onProgress && i % 1000 === 0) onProgress(i, numHands);
+    if (onProgress && (i & 1023) === 0) onProgress(i, numHands);
   }
 
   const houseEdge = totalBet > 0 ? ((totalBet - totalReturned) / totalBet) * 100 : 0;
