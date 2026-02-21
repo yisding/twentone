@@ -73,7 +73,7 @@ const strategyCases: StrategyCase[] = [
 ];
 
 describe("basic strategy actions", () => {
-  it.each(strategyCases)("$name", ({ playerCards, dealerUpCard, expected, rules = S17_RULES, playerOverrides }) => {
+  it.each(strategyCases)("$name", ({ playerCards, dealerUpCard, expected, rules = S17_RULES, playerOverrides }: StrategyCase) => {
     const playerHand = createHand(playerCards, playerOverrides);
     const dealerHand = createHand([dealerUpCard, card("2")]);
     expect(getBasicStrategyAction(playerHand, dealerHand, rules)).toBe(expected);

@@ -54,7 +54,7 @@ const houseEdgeCases: HouseEdgeCase[] = [
 ];
 
 describe("house edge regression", () => {
-  it.each(houseEdgeCases)("matches baseline: $name", ({ rules, expected, tolerance = 0.05 }) => {
+  it.each(houseEdgeCases)("matches baseline: $name", ({ rules, expected, tolerance = 0.05 }: HouseEdgeCase) => {
     const calculated = calculateHouseEdge(rules);
     expect(Math.abs(calculated - expected)).toBeLessThanOrEqual(tolerance);
   });

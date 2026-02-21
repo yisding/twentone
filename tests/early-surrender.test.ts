@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeActionEVs } from "@/app/lib/houseEdge";
+import { computeActionEVs } from "@/app/lib/ev-utils";
 import { createEmptyHand } from "@/app/lib/game";
 import { DEFAULT_HOUSE_RULES, type Card, type Hand, type HouseRules } from "@/app/lib/types";
 
@@ -12,7 +12,7 @@ function card(rank: string, suit: string = "hearts"): Card {
 }
 
 function actionEV(results: ReturnType<typeof computeActionEVs>, action: string): number {
-  const value = results.find((a) => a.action === action)?.ev;
+  const value = results.find((a: { action: string; ev: number }) => a.action === action)?.ev;
   if (value === undefined) {
     throw new Error(`Action ${action} not found in result set`);
   }
@@ -31,7 +31,7 @@ const EARLY_SURRENDER_RULES: HouseRules = {
 describe("early surrender EV behavior", () => {
   it("includes continue action when requested", () => {
     const results = computeActionEVs(createHand([card("10"), card("6")]), createHand([card("A"), card("5")]), EARLY_SURRENDER_RULES, true);
-    const continueAction = results.find((a) => a.action === "continue");
+    const continueAction = results.find((a: { action: string }) => a.action === "continue");
 
     expect(continueAction).toBeDefined();
     expect(continueAction?.isAvailable).toBe(true);
@@ -39,7 +39,7 @@ describe("early surrender EV behavior", () => {
 
   it("omits continue action when disabled", () => {
     const results = computeActionEVs(createHand([card("10"), card("6")]), createHand([card("A"), card("5")]), EARLY_SURRENDER_RULES, false);
-    expect(results.find((a) => a.action === "continue")).toBeUndefined();
+    expect(results.find((a: { action: string }) => a.action === "continue")).toBeUndefined();
   });
 
   it("keeps surrender EV at -0.5", () => {
@@ -71,8 +71,8 @@ describe("early surrender EV behavior", () => {
     const results = computeActionEVs(createHand([card("10"), card("6")]), createHand([card("9"), card("5")]), EARLY_SURRENDER_RULES, true);
     const bestSubActionEV = Math.max(
       ...results
-        .filter((a) => a.action !== "continue" && a.action !== "surrender" && a.isAvailable)
-        .map((a) => a.ev),
+        .filter((a: { action: string; isAvailable: boolean }) => a.action !== "continue" && a.action !== "surrender" && a.isAvailable)
+        .map((a: { ev: number }) => a.ev),
     );
 
     expect(actionEV(results, "continue")).toBeCloseTo(bestSubActionEV, 4);
