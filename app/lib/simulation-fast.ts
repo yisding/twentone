@@ -173,8 +173,14 @@ function getStrategyAction(
   hand: SimHand,
   dealerUpValue: number, // 2-11 (ace=11)
   rc: RuleConstants,
+  allowSurrender: boolean = true,
 ): Action {
-  const canSurrenderHand = rc.canSurrender && hand.cardCount === 2 && !hand.isSplit;
+  const canSurrenderHand =
+    allowSurrender &&
+    rc.canSurrender &&
+    hand.cardCount === 2 &&
+    !hand.isSplit &&
+    (!rc.blockSurrenderVsAce || dealerUpValue !== 11);
 
   // Pair strategy
   if (hand.isPair) {
@@ -561,6 +567,56 @@ export function simulateHouseEdge(
         const validated = validateAction(action, hand, numPlayerHands, dealerUpValue, rc);
 
         if (validated !== action) {
+          if (action === Action.Surrender) {
+            const noSurrenderAction = getStrategyAction(hand, dealerUpValue, rc, false);
+            const noSurrenderValidated = validateAction(
+              noSurrenderAction,
+              hand,
+              numPlayerHands,
+              dealerUpValue,
+              rc,
+            );
+
+            if (noSurrenderValidated === Action.Hit) {
+              hand.addCard(drawRank());
+              continue;
+            }
+            if (noSurrenderValidated === Action.Double) {
+              hand.addCard(drawRank());
+              hand.isDoubledDown = true;
+              hand.isStanding = true;
+              break;
+            }
+            if (noSurrenderValidated === Action.Split) {
+              const card1Rank = hand.cards[0];
+              const card2Rank = hand.cards[1];
+              const isSplittingAces = card1Rank === 1;
+              const wasSplitAces = hand.isSplitAces;
+
+              const newHand1 = hand; // reuse current slot
+              const newHand2Idx = numPlayerHands;
+              const newHand2 = pool.get(newHand2Idx);
+              newHand2.reset();
+
+              newHand1.reset();
+              newHand1.isSplit = true;
+              newHand1.isSplitAces = isSplittingAces || wasSplitAces;
+              newHand1.setFirstCard(card1Rank);
+              newHand1.addCard(drawRank());
+
+              newHand2.isSplit = true;
+              newHand2.isSplitAces = isSplittingAces || wasSplitAces;
+              newHand2.setFirstCard(card2Rank);
+              newHand2.addCard(drawRank());
+
+              numPlayerHands++;
+              continue;
+            }
+
+            hand.isStanding = true;
+            break;
+          }
+
           if ((action === Action.Double || action === Action.Split) && validated === Action.Hit) {
             // Double/split not available -> hit and continue playing
             hand.addCard(drawRank());
