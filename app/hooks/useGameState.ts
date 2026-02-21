@@ -283,12 +283,9 @@ function shouldPromptEarlySurrenderDecision(
   if (state.currentHandIndex !== 0 || state.playerHands.length !== 1) return false;
 
   const hand = state.playerHands[0];
-  const dealerUpCard = getDealerUpCard(state.dealerHand);
-  const dealerUpCardValue = dealerUpCard ? getCardValue(dealerUpCard) : 0;
 
   if (state.dealerHand.cards.length !== 2) return false;
   if (hand.cards.length !== 2 || hand.isSplit) return false;
-  if (dealerUpCardValue !== 10 && dealerUpCardValue !== 11) return false;
 
   return true;
 }
