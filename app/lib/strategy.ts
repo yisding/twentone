@@ -6,6 +6,7 @@ import {
   getDealerUpCard,
 } from "./deck";
 import { canSurrenderAgainstDealerUpCard } from "./surrender";
+import { isEarlySurrender } from "./surrender";
 
 export function getBasicStrategyAction(
   playerHand: Hand,
@@ -80,6 +81,7 @@ function getPairStrategy(
 ): PlayerAction | null {
   const pairValue = getCardValue(hand.cards[0]);
   const isSingleOrDoubleDeck = rules.decks <= 2;
+  const isEarlySurrenderRule = isEarlySurrender(rules);
 
   if (pairValue === 11) {
     return "split";
@@ -97,10 +99,10 @@ function getPairStrategy(
 
   if (pairValue === 8) {
     if (canSurrender) {
-      if (rules.surrenderAllowed === "early" && (dealerValue === 10 || dealerValue === 11)) {
+      if (isEarlySurrenderRule && (dealerValue === 10 || dealerValue === 11)) {
         return "surrender";
       }
-      if (rules.surrenderAllowed !== "early" && rules.hitSoft17 && dealerValue === 11) {
+      if (!isEarlySurrenderRule && rules.hitSoft17 && dealerValue === 11) {
         return "surrender";
       }
     }
@@ -108,7 +110,7 @@ function getPairStrategy(
   }
 
   if (pairValue === 7) {
-    if (canSurrender && rules.surrenderAllowed === "early" && (dealerValue === 10 || dealerValue === 11)) {
+    if (canSurrender && isEarlySurrenderRule && (dealerValue === 10 || dealerValue === 11)) {
       return "surrender";
     }
     if (dealerValue <= 7) return "split";
@@ -117,7 +119,7 @@ function getPairStrategy(
   }
 
   if (pairValue === 6) {
-    if (canSurrender && rules.surrenderAllowed === "early" && dealerValue === 11) {
+    if (canSurrender && isEarlySurrenderRule && dealerValue === 11) {
       return "surrender";
     }
     if (rules.doubleAfterSplit) {
@@ -140,7 +142,7 @@ function getPairStrategy(
   }
 
   if (pairValue === 3 || pairValue === 2) {
-    if (pairValue === 3 && canSurrender && rules.surrenderAllowed === "early" && dealerValue === 11) {
+    if (pairValue === 3 && canSurrender && isEarlySurrenderRule && dealerValue === 11) {
       return "surrender";
     }
     if (rules.doubleAfterSplit) {
@@ -209,9 +211,10 @@ function getHardTotalStrategy(
 ): PlayerAction {
   const isSingleOrDoubleDeck = rules.decks <= 2;
   const canDouble = canDoubleByRules(hand, total, rules);
+  const isEarlySurrenderRule = isEarlySurrender(rules);
 
   if (canSurrender) {
-    if (rules.surrenderAllowed === "early") {
+    if (isEarlySurrenderRule) {
       if (dealerValue === 11 && ((total >= 5 && total <= 7) || (total >= 12 && total <= 17))) {
         return "surrender";
       }
