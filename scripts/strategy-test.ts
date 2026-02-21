@@ -1,4 +1,4 @@
-import { getBasicStrategyAction } from "../app/lib/strategy";
+import { getBasicStrategyAction, getBestActionWithoutSurrender } from "../app/lib/strategy";
 import { Hand, HouseRules, DEFAULT_HOUSE_RULES, Card } from "../app/lib/types";
 import { createEmptyHand, getHandResult } from "../app/lib/game";
 
@@ -64,6 +64,12 @@ const DOUBLE_10_11_ONLY_RULES: HouseRules = {
 const DOUBLE_9_11_ONLY_RULES: HouseRules = {
   ...H17_RULES,
   doubleRestriction: "9-11",
+};
+
+const ENHC_NO_ACE_RULES: HouseRules = {
+  ...S17_RULES,
+  noHoleCard: true,
+  surrenderAllowed: "enhcNoAce",
 };
 
 function runTestSuite(
@@ -279,6 +285,23 @@ function runComparison() {
 
   allDiscrepancies.push(...runTestSuite("Double 9-11 only rules", double9to11TestCases, DOUBLE_9_11_ONLY_RULES));
 
+  const enhcNoAceCases: TestCase[] = [
+    {
+      playerCards: [card("10"), card("6")],
+      dealerUpCard: card("A"),
+      expected: "hit",
+      category: "ENHC no-Ace surrender - 16 vs A cannot surrender",
+    },
+    {
+      playerCards: [card("10"), card("6")],
+      dealerUpCard: card("10"),
+      expected: "surrender",
+      category: "ENHC no-Ace surrender - 16 vs 10 can surrender",
+    },
+  ];
+
+  allDiscrepancies.push(...runTestSuite("ENHC no-Ace surrender restrictions", enhcNoAceCases, ENHC_NO_ACE_RULES));
+
   allDiscrepancies.push(
     ...runTestSuite(
       "Split-hand action restrictions",
@@ -297,6 +320,21 @@ const dealerNineteen = createHand([card("10"), card("9")]);
 const splitResult = getHandResult(splitTwentyOne, dealerNineteen);
 if (splitResult !== "win") {
   discrepancies.push(`Split 21 payout check failed - Expected: win, Got: ${splitResult}`);
+}
+
+const fallbackRules: HouseRules = {
+  ...ENHC_NO_ACE_RULES,
+  doubleRestriction: "any",
+};
+const fallbackPlayerHand = createHand([card("10"), card("6")]);
+const fallbackDealerHand = createHand([card("A"), card("9")]);
+const fallbackAction = getBestActionWithoutSurrender(
+  fallbackPlayerHand,
+  fallbackDealerHand,
+  fallbackRules,
+);
+if (fallbackAction !== "hit") {
+  discrepancies.push(`No-surrender fallback failed - Expected: hit, Got: ${fallbackAction}`);
 }
 
 if (discrepancies.length === 0) {
