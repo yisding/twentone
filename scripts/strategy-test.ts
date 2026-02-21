@@ -72,6 +72,13 @@ const ENHC_NO_ACE_RULES: HouseRules = {
   surrenderAllowed: "enhcNoAce",
 };
 
+
+const ENHC_ALL_RULES: HouseRules = {
+  ...S17_RULES,
+  noHoleCard: true,
+  surrenderAllowed: "enhcAll",
+};
+
 function runTestSuite(
   name: string,
   testCases: TestCase[],
@@ -284,6 +291,23 @@ function runComparison() {
   ];
 
   allDiscrepancies.push(...runTestSuite("Double 9-11 only rules", double9to11TestCases, DOUBLE_9_11_ONLY_RULES));
+
+  const enhcAllCases: TestCase[] = [
+    {
+      playerCards: [card("10"), card("2")],
+      dealerUpCard: card("A"),
+      expected: "surrender",
+      category: "ENHC all-upcards surrender - 12 vs A uses early surrender table",
+    },
+    {
+      playerCards: [card("8"), card("8")],
+      dealerUpCard: card("A"),
+      expected: "surrender",
+      category: "ENHC all-upcards surrender - 8,8 vs A surrender",
+    },
+  ];
+
+  allDiscrepancies.push(...runTestSuite("ENHC all-upcards surrender behavior", enhcAllCases, ENHC_ALL_RULES));
 
   const enhcNoAceCases: TestCase[] = [
     {
