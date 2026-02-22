@@ -408,12 +408,12 @@ export function simulateHouseEdge(
     : Math.max(1, Math.floor(52 * rules.decks * (1 - reshufflePoint)));
 
   for (let i = 0; i < numHands; i++) {
+    const { returned, bet, deck: newDeck, surrenders: handSurrenders } = simulateHand(deck, rules);
+    deck = newDeck;
+
     if (rules.continuousShuffle || deck.length < minCards) {
       deck = createShoe(rules.decks);
     }
-
-    const { returned, bet, deck: newDeck, surrenders: handSurrenders } = simulateHand(deck, rules);
-    deck = newDeck;
 
     totalBet += bet;
     totalReturned += returned;
