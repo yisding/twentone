@@ -3,8 +3,16 @@ import { HouseRules, DEFAULT_HOUSE_RULES } from "../app/lib/types";
 import { calculateHouseEdge } from "../app/lib/houseEdge";
 
 const numHands = parseInt(process.argv[2]) || 1000000;
+const decksArg = parseInt(process.argv[3]);
+const reshuffleArg = parseFloat(process.argv[4]);
+const shuffleArg = (process.argv[5] || "").toLowerCase();
 
-const rules: HouseRules = DEFAULT_HOUSE_RULES;
+const rules: HouseRules = {
+  ...DEFAULT_HOUSE_RULES,
+  decks: Number.isNaN(decksArg) ? DEFAULT_HOUSE_RULES.decks : decksArg,
+  reshufflePoint: Number.isNaN(reshuffleArg) ? DEFAULT_HOUSE_RULES.reshufflePoint : reshuffleArg,
+  continuousShuffle: shuffleArg === "csm",
+};
 
 console.log(`\nBlackjack House Edge Simulation`);
 console.log(`================================`);
@@ -19,6 +27,8 @@ console.log(`  Surrender: ${rules.surrenderAllowed}`);
 console.log(`  Resplit Aces: ${rules.resplitAces}`);
 console.log(`  Max Split Hands: ${rules.maxSplitHands}`);
 console.log(`  No Hole Card: ${rules.noHoleCard}`);
+console.log(`  Reshuffle Point: ${(rules.reshufflePoint * 100).toFixed(0)}%`);
+console.log(`  Shuffle Mode: ${rules.continuousShuffle ? "CSM" : "Shoe"}`);
 console.log(`\nRunning simulation...\n`);
 
 const startTime = Date.now();

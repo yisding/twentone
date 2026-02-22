@@ -402,10 +402,13 @@ export function simulateHouseEdge(
   let surrenders = 0;
 
   let deck = createShoe(rules.decks);
-  const minCards = 52 * rules.decks * 0.25;
+  const reshufflePoint = Number.isFinite(rules.reshufflePoint) ? rules.reshufflePoint : DEFAULT_HOUSE_RULES.reshufflePoint;
+  const minCards = rules.continuousShuffle
+    ? Number.POSITIVE_INFINITY
+    : Math.max(1, Math.floor(52 * rules.decks * (1 - reshufflePoint)));
 
   for (let i = 0; i < numHands; i++) {
-    if (deck.length < minCards) {
+    if (rules.continuousShuffle || deck.length < minCards) {
       deck = createShoe(rules.decks);
     }
 

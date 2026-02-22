@@ -1,7 +1,8 @@
 import { getBasicStrategyAction, getStrategyExplanation } from "../app/lib/strategy";
-import { HouseRules, Card, Hand } from "../app/lib/types";
+import { HouseRules, Card, Hand, DEFAULT_HOUSE_RULES } from "../app/lib/types";
 
 const baseRules: HouseRules = {
+  ...DEFAULT_HOUSE_RULES,
   hitSoft17: false,
   surrenderAllowed: "late",
   doubleAfterSplit: true,

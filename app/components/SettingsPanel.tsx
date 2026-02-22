@@ -132,6 +132,32 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
             />
 
             <DeckSelector decks={rules.decks} onChange={(decks) => onRulesChange({ ...rules, decks })} />
+
+            <SelectOption
+              label="Shuffle"
+              value={rules.continuousShuffle ? "csm" : "shoe"}
+              options={[
+                { value: "shoe", label: "Shoe" },
+                { value: "csm", label: "CSM" },
+              ]}
+              onChange={(shuffleMode) =>
+                onRulesChange({ ...rules, continuousShuffle: shuffleMode === "csm" })
+              }
+            />
+
+            <SelectOption
+              label="Reshuffle point"
+              value={rules.reshufflePoint.toString()}
+              options={[
+                { value: "0.6", label: "60%" },
+                { value: "0.7", label: "70%" },
+                { value: "0.75", label: "75%" },
+                { value: "0.8", label: "80%" },
+              ]}
+              onChange={(reshufflePoint) =>
+                onRulesChange({ ...rules, reshufflePoint: parseFloat(reshufflePoint) })
+              }
+            />
           </div>
 
           <div className="mt-3 border-t border-border/70 pt-3">
@@ -196,7 +222,7 @@ function DeckSelector({ decks, onChange }: DeckSelectorProps) {
     <div className="flex min-h-10 items-center justify-between rounded-md border bg-background px-3 py-2 sm:col-span-2">
       <label className="pr-2 text-sm font-medium leading-tight">Decks</label>
       <div className="flex gap-2">
-        {[2, 6].map((num) => (
+        {[2, 6, 8].map((num) => (
           <Button
             key={num}
             variant={decks === num ? "default" : "outline"}
@@ -208,12 +234,12 @@ function DeckSelector({ decks, onChange }: DeckSelectorProps) {
           </Button>
         ))}
         <Select
-          value={decks === 2 || decks === 6 ? "" : decks.toString()}
+          value={decks === 2 || decks === 6 || decks === 8 ? "" : decks.toString()}
           onValueChange={(v) => onChange(parseInt(v))}
         >
           <SelectTrigger
             size="sm"
-            className={decks !== 2 && decks !== 6 ? "w-20 border-green-600 bg-green-600 text-white" : "w-20"}
+            className={decks !== 2 && decks !== 6 && decks !== 8 ? "w-20 border-green-600 bg-green-600 text-white" : "w-20"}
           >
             <SelectValue placeholder="Other" />
           </SelectTrigger>
