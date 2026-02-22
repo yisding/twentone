@@ -419,7 +419,6 @@ export function simulateHouseEdge(
     totalReturned += returned;
     surrenders += handSurrenders;
 
-
     const netResult = returned - bet;
     if (netResult >= bet * 1.4) {
       blackjacks++;

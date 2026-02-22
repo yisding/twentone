@@ -515,6 +515,10 @@ export function simulateHouseEdge(
         totalReturned += bet;
         pushes++;
       }
+      if (rc.continuousShuffle || shoeSize - deckIdx < rc.minCards) {
+        shuffleShoe(shoe);
+        deckIdx = 0;
+      }
       if (onProgress && i % 1000 === 0) onProgress(i, numHands);
       continue;
     }
