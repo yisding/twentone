@@ -149,6 +149,7 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
               label="Reshuffle point"
               value={rules.reshufflePoint.toString()}
               options={[
+                { value: "0.5", label: "50%" },
                 { value: "0.6", label: "60%" },
                 { value: "0.7", label: "70%" },
                 { value: "0.75", label: "75%" },
