@@ -57,7 +57,7 @@ export interface TrainingModeState {
 export function useTrainingMode(rules: HouseRules) {
   const [state, setState] = useState<TrainingModeState>(() => ({
     currentScenario: null,
-    progress: loadProgress(),
+    progress: getEmptyProgress(),
     showAnswer: false,
     lastAnswerCorrect: null,
     lastExpectedAction: null,
@@ -66,9 +66,16 @@ export function useTrainingMode(rules: HouseRules) {
     focusCategory: null,
   }));
 
+  // Load from localStorage after mount to avoid hydration mismatch
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    saveProgress(state.progress);
-  }, [state.progress]);
+    setState((prev) => ({ ...prev, progress: loadProgress() }));
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (hydrated) saveProgress(state.progress);
+  }, [state.progress, hydrated]);
 
   const availableScenarios = TRAINING_SCENARIOS;
 

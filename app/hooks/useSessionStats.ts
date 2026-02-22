@@ -1,8 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { SessionStats } from "../lib/types";
 
+const DEFAULT_STATS: SessionStats = { correct: 0, wrong: 0, winnings: 0 };
+
 function loadStats(): SessionStats {
-  if (typeof window === "undefined") return { correct: 0, wrong: 0, winnings: 0 };
   try {
     const saved = localStorage.getItem("blackjack-stats");
     if (saved) {
@@ -14,7 +15,7 @@ function loadStats(): SessionStats {
   } catch {
     // ignore
   }
-  return { correct: 0, wrong: 0, winnings: 0 };
+  return DEFAULT_STATS;
 }
 
 function saveStats(stats: SessionStats) {
@@ -22,7 +23,12 @@ function saveStats(stats: SessionStats) {
 }
 
 export function useSessionStats() {
-  const [stats, setStats] = useState<SessionStats>(loadStats);
+  const [stats, setStats] = useState<SessionStats>(DEFAULT_STATS);
+
+  // Load from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    setStats(loadStats());
+  }, []);
 
   const recordAnswer = useCallback((isCorrect: boolean) => {
     setStats((prev) => {

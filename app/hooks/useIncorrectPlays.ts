@@ -1,10 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { IncorrectPlay, Card, PlayerAction, HouseRules } from "../lib/types";
 import { calculateCardsValue, isPair, getCardValue } from "../lib/deck";
 import { getStrategyExplanation } from "../lib/strategy";
 
 function loadPlays(): IncorrectPlay[] {
-  if (typeof window === "undefined") return [];
   try {
     const saved = localStorage.getItem("blackjack-incorrect-plays");
     if (saved) {
@@ -30,7 +29,12 @@ function describeHand(cards: Card[]): string {
 }
 
 export function useIncorrectPlays() {
-  const [plays, setPlays] = useState<IncorrectPlay[]>(loadPlays);
+  const [plays, setPlays] = useState<IncorrectPlay[]>([]);
+
+  // Load from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    setPlays(loadPlays());
+  }, []);
 
   const recordIncorrectPlay = useCallback(
     (playerCards: Card[], dealerUpCard: Card, playerAction: PlayerAction, expectedAction: PlayerAction, rules: HouseRules) => {

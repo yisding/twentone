@@ -24,14 +24,11 @@ export function getEmptyProgress(): TrainingProgress {
       "tricky-totals": { correct: 0, total: 0 },
     },
     totalSessions: 0,
-    lastSession: Date.now(),
+    lastSession: 0,
   };
 }
 
 export function loadProgress(): TrainingProgress {
-  if (typeof window === "undefined") {
-    return getEmptyProgress();
-  }
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return getEmptyProgress();
