@@ -40,6 +40,8 @@ export interface HouseRules {
   resplitAces: boolean;
   blackjackPays: "3:2" | "6:5" | "1:1";
   decks: number;
+  reshufflePoint: number;
+  continuousShuffle: boolean;
   noHoleCard: boolean;
   maxSplitHands: 2 | 3 | 4;
 }
@@ -100,6 +102,8 @@ export const DEFAULT_HOUSE_RULES: HouseRules = {
   resplitAces: true,
   blackjackPays: "3:2",
   decks: 2,
+  reshufflePoint: 0.7,
+  continuousShuffle: false,
   noHoleCard: false,
   maxSplitHands: 4,
 };
