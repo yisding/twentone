@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HouseRules } from "../lib/types";
 import { calculateHouseEdge } from "../lib/houseEdge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,11 @@ export function SimulationPanel({ rules }: SimulationPanelProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setResult(null);
+    setError(null);
+  }, [rules]);
 
   const runSimulation = async () => {
     setIsRunning(true);
