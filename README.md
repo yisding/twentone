@@ -119,5 +119,4 @@ Runs a server-side house-edge simulation.
   - `pnpm test:house-edge`
 
 ## License
-
-No license file is currently included in this repository. Add one if you intend to distribute or open-source the project.
+2-Clause BSD
