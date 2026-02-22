@@ -29,6 +29,7 @@ export default function Home() {
     availableActions,
     needsEarlySurrenderDecision,
     declineEarlySurrender,
+    discardCurrentGame,
   } = useGameState(
     rules,
     useCallback(() => recordAnswer(true), [recordAnswer]),
@@ -49,6 +50,12 @@ export default function Home() {
     getAvailableActions: getTrainingActions,
   } = useTrainingMode(rules);
 
+  const handleRulesChange = useCallback((nextRules: HouseRules) => {
+    setRules(nextRules);
+    discardCurrentGame();
+    setGameMode("practice");
+  }, [discardCurrentGame]);
+
   const currentHand = gameState?.playerHands[gameState.currentHandIndex];
 
   return (
@@ -60,7 +67,7 @@ export default function Home() {
           <div className="p-4 border-b border-border">
             <SettingsPanel
               rules={rules}
-              onRulesChange={setRules}
+              onRulesChange={handleRulesChange}
               isOpen={settingsOpen}
               onToggle={() => setSettingsOpen(!settingsOpen)}
             />
