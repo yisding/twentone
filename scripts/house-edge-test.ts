@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { calculateHouseEdge } from "../app/lib/houseEdge";
 import { HouseRules, DEFAULT_HOUSE_RULES } from "../app/lib/types";
 
@@ -295,7 +297,7 @@ const testCases: TestCase[] = [
   },
 ];
 
-function runTests() {
+export function runHouseEdgeTests(): { passed: number; failed: number } {
   console.log("House Edge Calculator Tests\n");
   console.log("=".repeat(60));
 
@@ -354,9 +356,14 @@ function runTests() {
   console.log("\n" + "=".repeat(60));
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
 
-  if (failed > 0) process.exit(1);
+  return { passed, failed };
 }
 
-runTests();
+const isDirectRun =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
-export {};
+if (isDirectRun) {
+  const results = runHouseEdgeTests();
+  if (results.failed > 0) process.exit(1);
+}

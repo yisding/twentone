@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { getBasicStrategyAction } from "../app/lib/strategy";
 import { computeActionEVs } from "../app/lib/ev-utils";
 import { Hand, HouseRules, DEFAULT_HOUSE_RULES, Card } from "../app/lib/types";
@@ -281,20 +283,27 @@ function runContinueEVTests(): string[] {
   return discrepancies;
 }
 
-// =============================================
-// Run all tests
-// =============================================
-const allDiscrepancies: string[] = [];
+export function runEarlySurrenderSuite(): string[] {
+  const allDiscrepancies: string[] = [];
 
-allDiscrepancies.push(...runEarlySurrenderTests());
-allDiscrepancies.push(...runContinueEVTests());
+  allDiscrepancies.push(...runEarlySurrenderTests());
+  allDiscrepancies.push(...runContinueEVTests());
 
-if (allDiscrepancies.length === 0) {
-  console.log("\nAll early surrender tests passed!");
-} else {
-  console.log(`\nFound ${allDiscrepancies.length} discrepancies:\n`);
-  allDiscrepancies.forEach((d, i) => console.log(`${i + 1}. ${d}`));
-  process.exit(1);
+  return allDiscrepancies;
 }
 
-export {};
+const isDirectRun =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
+  const allDiscrepancies = runEarlySurrenderSuite();
+
+  if (allDiscrepancies.length === 0) {
+    console.log("\nAll early surrender tests passed!");
+  } else {
+    console.log(`\nFound ${allDiscrepancies.length} discrepancies:\n`);
+    allDiscrepancies.forEach((d, i) => console.log(`${i + 1}. ${d}`));
+    process.exit(1);
+  }
+}
