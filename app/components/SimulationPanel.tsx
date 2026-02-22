@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { DEFAULT_HOUSE_RULES, HouseRules } from "../lib/types";
+import { useEffect, useRef, useState } from "react";
+import { HouseRules } from "../lib/types";
 import { calculateHouseEdge } from "../lib/houseEdge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,44 +12,74 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Play, Loader2 } from "lucide-react";
-import { simulateHouseEdge, SimulationResult } from "../lib/simulation-fast";
+import { SimulationResult } from "../lib/simulation-fast";
 
 interface SimulationPanelProps {
   rules: HouseRules;
   onRulesChange: (rules: HouseRules) => void;
 }
 
+
+type WorkerResponse =
+  | { type: "simulation-complete"; result: SimulationResult }
+  | { type: "simulation-error"; error: string };
+
 export function SimulationPanel({ rules, onRulesChange }: SimulationPanelProps) {
   const [numHands, setNumHands] = useState(1000000);
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    setResult(null);
-    setError(null);
-  }, [rules]);
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, []);
 
-  const runSimulation = async () => {
+  const runSimulation = () => {
     setIsRunning(true);
     setError(null);
     setResult(null);
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      const simulationRules: HouseRules = {
-        ...DEFAULT_HOUSE_RULES,
-        ...rules,
-      };
-      const data = simulateHouseEdge(numHands, simulationRules);
-      setResult(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Simulation failed");
-    } finally {
-      setIsRunning(false);
+    if (!workerRef.current) {
+      workerRef.current = new Worker(
+        new URL("../workers/simulationWorker.ts", import.meta.url),
+      );
     }
-  };
 
+    const currentRequestId = ++requestIdRef.current;
+
+    workerRef.current.onmessage = (event: MessageEvent<WorkerResponse>) => {
+      if (currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
+      if (event.data.type === "simulation-complete") {
+        setResult(event.data.result);
+        setError(null);
+      } else {
+        setError(event.data.error);
+      }
+      setIsRunning(false);
+    };
+
+    workerRef.current.onerror = () => {
+      if (currentRequestId !== requestIdRef.current) {
+        return;
+      }
+      setError("Simulation worker failed");
+      setIsRunning(false);
+    };
+
+    workerRef.current.postMessage({
+      type: "run-simulation",
+      numHands,
+      rules,
+    });
+  };
   const theoreticalEdge = calculateHouseEdge(rules);
 
   return (
