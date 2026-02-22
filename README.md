@@ -1,6 +1,6 @@
 # TwentOne — Blackjack Strategy Trainer
 
-TwentyOne is a **Next.js 16 + TypeScript** blackjack trainer focused on helping players learn and drill mathematically correct basic strategy under configurable casino rules.
+TwentOne is a **Next.js 16 + TypeScript** blackjack trainer focused on helping players learn and drill mathematically correct basic strategy under configurable casino rules.
 
 ## What this app does
 
