@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HouseRules } from "../lib/types";
+import { DEFAULT_HOUSE_RULES, HouseRules } from "../lib/types";
 import { calculateHouseEdge } from "../lib/houseEdge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Play, Loader2 } from "lucide-react";
-import { SimulationResult } from "../lib/simulation";
+import { simulateHouseEdge, SimulationResult } from "../lib/simulation-fast";
 
 interface SimulationPanelProps {
   rules: HouseRules;
@@ -33,20 +33,15 @@ export function SimulationPanel({ rules, onRulesChange }: SimulationPanelProps) 
   const runSimulation = async () => {
     setIsRunning(true);
     setError(null);
-    
+    setResult(null);
+
     try {
-      const response = await fetch("/api/simulate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numHands, rules }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Simulation failed: ${response.status}${errorData.error ? ` - ${errorData.error}` : ""}`);
-      }
-
-      const data = await response.json();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const simulationRules: HouseRules = {
+        ...DEFAULT_HOUSE_RULES,
+        ...rules,
+      };
+      const data = simulateHouseEdge(numHands, simulationRules);
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Simulation failed");
