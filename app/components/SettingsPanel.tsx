@@ -86,7 +86,7 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
             />
 
             <ToggleOption
-              label="No hole card (ENHC)"
+              label="No hole card (European)"
               checked={rules.noHoleCard}
               onChange={(noHoleCard) => {
                 const surrenderAllowed = noHoleCard
