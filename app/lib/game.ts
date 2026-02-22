@@ -251,13 +251,14 @@ export function playerSurrender(state: GameState): GameState {
   const allResolved = newHands.every(
     (h) => h.isStanding || isBusted(h) || h.isSurrendered,
   );
+  const allHandsSurrendered = newHands.every((h) => h.isSurrendered);
 
   const isLastHand = state.currentHandIndex === state.playerHands.length - 1;
 
   return {
     ...state,
     playerHands: newHands,
-    phase: allResolved ? "dealer" : state.phase,
+    phase: allResolved ? (allHandsSurrendered ? "resolved" : "dealer") : state.phase,
     currentHandIndex: isLastHand
       ? state.currentHandIndex
       : state.currentHandIndex + 1,
