@@ -137,6 +137,7 @@ interface RuleConstants {
   noHoleCard: boolean;
   bjPayMultiplier: number;
   minCards: number;
+  continuousShuffle: boolean;
   decks: number;
 }
 
@@ -153,7 +154,8 @@ function precomputeRules(rules: HouseRules): RuleConstants {
     maxSplitHands: rules.maxSplitHands,
     noHoleCard: rules.noHoleCard,
     bjPayMultiplier: rules.blackjackPays === "3:2" ? 1.5 : rules.blackjackPays === "6:5" ? 1.2 : 1,
-    minCards: (52 * rules.decks * 0.25) | 0,
+    minCards: Math.max(1, Math.floor(52 * rules.decks * (1 - rules.reshufflePoint))),
+    continuousShuffle: rules.continuousShuffle,
     decks: rules.decks,
   };
 }
@@ -458,7 +460,7 @@ export function simulateHouseEdge(
 
   for (let i = 0; i < numHands; i++) {
     // Match simulation.ts reshuffle behavior so edge comparisons are apples-to-apples.
-    if (shoeSize - deckIdx < rc.minCards) {
+    if (rc.continuousShuffle || shoeSize - deckIdx < rc.minCards) {
       shuffleShoe(shoe);
       deckIdx = 0;
     }
@@ -486,7 +488,7 @@ export function simulateHouseEdge(
       if (rc.noHoleCard && playerBJ && dealerHand.cardCount === 1) {
         const upCardValue = RANK_VALUE[dealerHand.cards[0]];
         if (upCardValue === 10 || upCardValue === 11) {
-          dealerHand.addCard(shoe[deckIdx++]);
+          dealerHand.addCard(drawRank());
           dealerBJ = dealerHand.isBlackjack;
         }
       }
