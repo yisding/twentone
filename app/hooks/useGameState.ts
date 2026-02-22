@@ -234,6 +234,13 @@ export function useGameState(
     setGameState(dealerPlay(gameState, rules));
   }, [gameState, rules]);
 
+  const discardCurrentGame = useCallback(() => {
+    winningsProcessedRef.current = false;
+    setHasCompletedEarlySurrenderDecision(false);
+    setShowCorrectAnswer(false);
+    setGameState(null);
+  }, []);
+
   const nextHand = useCallback(() => {
     if (!gameState) return;
     let newState = { ...gameState, currentHandIndex: gameState.currentHandIndex + 1 };
@@ -264,6 +271,7 @@ export function useGameState(
     startNewGame,
     handleAction,
     handleDealerPlay,
+    discardCurrentGame,
     declineEarlySurrender,
     nextHand,
     availableActions,
