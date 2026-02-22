@@ -4,14 +4,22 @@ import { useEffect, useState } from "react";
 import { HouseRules } from "../lib/types";
 import { calculateHouseEdge } from "../lib/houseEdge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Play, Loader2 } from "lucide-react";
 import { SimulationResult } from "../lib/simulation";
 
 interface SimulationPanelProps {
   rules: HouseRules;
+  onRulesChange: (rules: HouseRules) => void;
 }
 
-export function SimulationPanel({ rules }: SimulationPanelProps) {
+export function SimulationPanel({ rules, onRulesChange }: SimulationPanelProps) {
   const [numHands, setNumHands] = useState(1000000);
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
@@ -51,6 +59,36 @@ export function SimulationPanel({ rules }: SimulationPanelProps) {
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <SelectOption
+          label="Shuffle"
+          value={rules.continuousShuffle ? "csm" : "shoe"}
+          options={[
+            { value: "shoe", label: "Shoe" },
+            { value: "csm", label: "CSM" },
+          ]}
+          onChange={(shuffleMode) =>
+            onRulesChange({ ...rules, continuousShuffle: shuffleMode === "csm" })
+          }
+        />
+
+        <SelectOption
+          label="Reshuffle point"
+          value={rules.reshufflePoint.toString()}
+          options={[
+            { value: "0.5", label: "50%" },
+            { value: "0.6", label: "60%" },
+            { value: "0.7", label: "70%" },
+            { value: "0.75", label: "75%" },
+            { value: "0.8", label: "80%" },
+          ]}
+          onChange={(reshufflePoint) =>
+            onRulesChange({ ...rules, reshufflePoint: parseFloat(reshufflePoint) })
+          }
+          disabled={rules.continuousShuffle}
+        />
+      </div>
+
       <div className="flex items-center gap-4">
         <label className="text-sm font-medium">Hands:</label>
         <div className="flex gap-2">
@@ -152,6 +190,34 @@ function ResultStat({ label, value, className }: ResultStatProps) {
     <div className="text-center">
       <div className={`text-lg font-bold ${className || ""}`}>{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+interface SelectOptionProps {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}
+
+function SelectOption({ label, value, options, onChange, disabled = false }: SelectOptionProps) {
+  return (
+    <div className="flex min-h-10 items-center justify-between rounded-md border bg-background px-3 py-2">
+      <label className="pr-2 text-sm font-medium leading-tight">{label}</label>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger size="sm" className="h-8 w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

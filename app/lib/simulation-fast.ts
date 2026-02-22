@@ -463,12 +463,6 @@ export function simulateHouseEdge(
   let surrenders = 0;
 
   for (let i = 0; i < numHands; i++) {
-    // Match simulation.ts reshuffle behavior so edge comparisons are apples-to-apples.
-    if (rc.continuousShuffle || shoeSize - deckIdx < rc.minCards) {
-      shuffleShoe(shoe);
-      deckIdx = 0;
-    }
-
     // Reset hands
     const playerHand = pool.get(0);
     playerHand.reset();
@@ -761,6 +755,11 @@ export function simulateHouseEdge(
     totalBet += roundBet;
     totalReturned += roundReturned;
     surrenders += roundSurrenders;
+
+    if (rc.continuousShuffle || shoeSize - deckIdx < rc.minCards) {
+      shuffleShoe(shoe);
+      deckIdx = 0;
+    }
 
     // Classify round result (matching original simulation.ts logic)
     const netResult = roundReturned - roundBet;
