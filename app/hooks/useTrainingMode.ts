@@ -67,15 +67,17 @@ export function useTrainingMode(rules: HouseRules) {
   }));
 
   // Load from localStorage after mount to avoid hydration mismatch
-  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    setState((prev) => ({ ...prev, progress: loadProgress() }));
-    setHydrated(true);
+    const timer = window.setTimeout(() => {
+      setState((prev) => ({ ...prev, progress: loadProgress() }));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (hydrated) saveProgress(state.progress);
-  }, [state.progress, hydrated]);
+    saveProgress(state.progress);
+  }, [state.progress]);
 
   const availableScenarios = TRAINING_SCENARIOS;
 
