@@ -15,11 +15,21 @@ import {
   CATEGORY_DESCRIPTIONS,
 } from "../lib/training-scenarios";
 import { calculateCardsValue } from "../lib/deck";
-import { computeAvailableActionEVs, computeEVCost, formatEV, formatEVLoss } from "../lib/ev-utils";
-import { actionToString, getActionVariant, getActionColor } from "../lib/format";
+import {
+  computeAvailableActionEVs,
+  computeEVCost,
+  formatEV,
+  formatEVLoss,
+} from "../lib/ev-utils";
+import {
+  actionToString,
+  getActionVariant,
+  getActionColor,
+} from "../lib/format";
 import type { StrategyTable } from "../lib/ev-calculator";
 
 interface TrainingModeProps {
+  needsEarlySurrenderDecision: boolean;
   currentScenario: TrainingScenario | null;
   showAnswer: boolean;
   lastAnswerCorrect: boolean | null;
@@ -32,6 +42,7 @@ interface TrainingModeProps {
   availableActions: PlayerAction[];
   onNextScenario: () => void;
   onSubmitAnswer: (action: PlayerAction) => void;
+  onDeclineEarlySurrender: () => void;
   onSetFocusCategory: (category: TrainingScenarioCategory | null) => void;
   onSkip: () => void;
   categoryStats: Record<
@@ -42,6 +53,7 @@ interface TrainingModeProps {
 }
 
 export function TrainingMode({
+  needsEarlySurrenderDecision,
   currentScenario,
   showAnswer,
   lastAnswerCorrect,
@@ -54,6 +66,7 @@ export function TrainingMode({
   availableActions,
   onNextScenario,
   onSubmitAnswer,
+  onDeclineEarlySurrender,
   onSetFocusCategory,
   onSkip,
   categoryStats,
@@ -68,7 +81,11 @@ export function TrainingMode({
         <p className="text-muted-foreground mb-6">
           Focus on the harder parts of basic strategy with spaced repetition.
         </p>
-        <Button onClick={onNextScenario} size="lg" className="bg-green-600 hover:bg-green-700">
+        <Button
+          onClick={onNextScenario}
+          size="lg"
+          className="bg-green-600 hover:bg-green-700"
+        >
           Start Training
         </Button>
       </div>
@@ -173,10 +190,14 @@ export function TrainingMode({
 
       {!showAnswer ? (
         <div className="space-y-4">
-          <div className="text-center text-muted-foreground">What is the correct play?</div>
+          <div className="text-center text-muted-foreground">
+            What is the correct play?
+          </div>
           <ActionButtons
             actions={availableActions}
             onAction={onSubmitAnswer}
+            needsEarlySurrenderDecision={needsEarlySurrenderDecision}
+            onDeclineEarlySurrender={onDeclineEarlySurrender}
             disabled={showAnswer}
           />
           <div className="text-center">
@@ -197,12 +218,15 @@ export function TrainingMode({
           />
 
           <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-lg p-4">
-            <p className="text-sm text-blue-700 dark:text-blue-300">{currentScenario.explanation}</p>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              {currentScenario.explanation}
+            </p>
           </div>
 
-          {currentScenario.rulesVariants && currentScenario.rulesVariants.length > 0 && (
-            <RulesetNote rules={rules} />
-          )}
+          {currentScenario.rulesVariants &&
+            currentScenario.rulesVariants.length > 0 && (
+              <RulesetNote rules={rules} />
+            )}
 
           <div className="text-center">
             <Button
@@ -219,57 +243,71 @@ export function TrainingMode({
   );
 }
 
-function HandDescription({ cards }: { cards: TrainingScenario["playerCards"] }) {
+function HandDescription({
+  cards,
+}: {
+  cards: TrainingScenario["playerCards"];
+}) {
   const { total, isSoft } = calculateCardsValue(cards);
   const isPair = cards.length === 2 && cards[0].rank === cards[1].rank;
 
   if (isPair) {
-    return (
-      <Badge variant="secondary">
-        Pair of {cards[0].rank}s
-      </Badge>
-    );
+    return <Badge variant="secondary">Pair of {cards[0].rank}s</Badge>;
   }
 
   if (isSoft && total <= 21) {
-    return (
-      <Badge variant="secondary">
-        Soft {total}
-      </Badge>
-    );
+    return <Badge variant="secondary">Soft {total}</Badge>;
   }
 
-  return (
-    <Badge variant="secondary">
-      {total}
-    </Badge>
-  );
+  return <Badge variant="secondary">{total}</Badge>;
 }
 
 function ActionButtons({
   actions,
   onAction,
+  needsEarlySurrenderDecision,
+  onDeclineEarlySurrender,
   disabled,
 }: {
   actions: PlayerAction[];
   onAction: (action: PlayerAction) => void;
+  needsEarlySurrenderDecision: boolean;
+  onDeclineEarlySurrender: () => void;
   disabled: boolean;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 justify-center">
-      {actions.map((action) => (
-        <Button
-          key={action}
-          variant={getActionVariant(action)}
-          size="lg"
-          onClick={() => onAction(action)}
-          disabled={disabled}
-          className={getActionColor(action)}
-          aria-label={actionToString(action)}
-        >
-          {actionToString(action)}
-        </Button>
-      ))}
+    <div className="space-y-4">
+      {needsEarlySurrenderDecision && (
+        <p className="text-center text-sm text-muted-foreground">
+          Early surrender decision: surrender now or continue the hand.
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2 justify-center">
+        {actions.map((action) => (
+          <Button
+            key={action}
+            variant={getActionVariant(action)}
+            size="lg"
+            onClick={() => onAction(action)}
+            disabled={disabled}
+            className={getActionColor(action)}
+            aria-label={actionToString(action)}
+          >
+            {actionToString(action)}
+          </Button>
+        ))}
+        {needsEarlySurrenderDecision && (
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={onDeclineEarlySurrender}
+            disabled={disabled}
+            aria-label="Continue hand"
+          >
+            Continue Hand
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -310,12 +348,23 @@ function FeedbackMessage({
     isStanding: false,
   };
 
-  const actionEVs = computeAvailableActionEVs(playerHand, dealerHand, rules, strategyTable)
-    .sort((a, b) => b.ev - a.ev);
+  const actionEVs = computeAvailableActionEVs(
+    playerHand,
+    dealerHand,
+    rules,
+    strategyTable,
+  ).sort((a, b) => b.ev - a.ev);
 
-  const evCost = !isCorrect && chosenAction && expectedAction
-    ? computeEVCost(playerHand, dealerHand, chosenAction, rules, strategyTable)
-    : null;
+  const evCost =
+    !isCorrect && chosenAction && expectedAction
+      ? computeEVCost(
+          playerHand,
+          dealerHand,
+          chosenAction,
+          rules,
+          strategyTable,
+        )
+      : null;
 
   return (
     <div className="space-y-2">
@@ -329,23 +378,29 @@ function FeedbackMessage({
       </div>
       {actionEVs.length > 0 && (
         <div className="text-center">
-          <div className={cn(
-            "inline-block rounded-lg px-3 py-2 max-w-full overflow-hidden",
-            isCorrect
-              ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/40"
-              : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40"
-          )}>
+          <div
+            className={cn(
+              "inline-block rounded-lg px-3 py-2 max-w-full overflow-hidden",
+              isCorrect
+                ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/40"
+                : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40",
+            )}
+          >
             <div className="flex items-center gap-2 text-sm flex-wrap justify-center">
               {actionEVs.map((a, i) => (
                 <span key={a.action} className="flex items-center gap-2">
                   {i > 0 && <span className="text-zinc-400">|</span>}
-                  <span className={cn(
-                    a.action === (expectedAction ?? chosenAction)
-                      ? isCorrect ? "text-green-600 dark:text-green-400 font-medium" : "text-red-600 dark:text-red-400 font-medium"
-                      : a.action === chosenAction && !isCorrect
-                        ? "text-foreground/70 font-medium"
-                        : "text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      a.action === (expectedAction ?? chosenAction)
+                        ? isCorrect
+                          ? "text-green-600 dark:text-green-400 font-medium"
+                          : "text-red-600 dark:text-red-400 font-medium"
+                        : a.action === chosenAction && !isCorrect
+                          ? "text-foreground/70 font-medium"
+                          : "text-muted-foreground",
+                    )}
+                  >
                     {actionToString(a.action)}: {formatEV(a.ev)}
                   </span>
                 </span>
@@ -363,17 +418,14 @@ function FeedbackMessage({
   );
 }
 
-function RulesetNote({
-  rules,
-}: {
-  rules: HouseRules;
-}) {
+function RulesetNote({ rules }: { rules: HouseRules }) {
   return (
     <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-lg p-3">
       <p className="text-xs text-amber-700 dark:text-amber-300">
         <strong>Note:</strong> This scenario has ruleset variations. The correct
-        play depends on your current rules (H17: {rules.hitSoft17 ? "Yes" : "No"},
-        DAS: {rules.doubleAfterSplit ? "Yes" : "No"}, Decks: {rules.decks}).
+        play depends on your current rules (H17:{" "}
+        {rules.hitSoft17 ? "Yes" : "No"}, DAS:{" "}
+        {rules.doubleAfterSplit ? "Yes" : "No"}, Decks: {rules.decks}).
       </p>
     </div>
   );
@@ -416,7 +468,9 @@ function CategorySelector({
         {categories.map((cat) => {
           const stats = categoryStats[cat];
           const accuracy =
-            stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+            stats.total > 0
+              ? Math.round((stats.correct / stats.total) * 100)
+              : 0;
           const isWeak = weakCategories.includes(cat);
 
           return (
@@ -430,7 +484,7 @@ function CategorySelector({
                 "text-left p-3 rounded border transition-colors",
                 focusCategory === cat
                   ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
-                  : "border-border hover:border-border/80"
+                  : "border-border hover:border-border/80",
               )}
             >
               <div className="flex items-center gap-2">
@@ -438,7 +492,10 @@ function CategorySelector({
                   {CATEGORY_LABELS[cat]}
                 </span>
                 {isWeak && (
-                  <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                  <Badge
+                    variant="secondary"
+                    className="text-xs bg-amber-100 text-amber-800"
+                  >
                     Weak
                   </Badge>
                 )}
@@ -448,13 +505,22 @@ function CategorySelector({
               </p>
               {stats.total > 0 && (
                 <p className="text-xs mt-1">
-                  <span className={cn(
-                    "font-medium",
-                    accuracy >= 80 ? "text-green-600" : accuracy >= 60 ? "text-amber-600" : "text-red-600"
-                  )}>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      accuracy >= 80
+                        ? "text-green-600"
+                        : accuracy >= 60
+                          ? "text-amber-600"
+                          : "text-red-600",
+                    )}
+                  >
                     {accuracy}%
                   </span>
-                  <span className="text-zinc-400"> ({stats.correct}/{stats.total})</span>
+                  <span className="text-zinc-400">
+                    {" "}
+                    ({stats.correct}/{stats.total})
+                  </span>
                 </p>
               )}
             </button>
