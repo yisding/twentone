@@ -1,14 +1,17 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repository is a single Next.js 16 + TypeScript app.
+This repository is a single Next.js 16 + TypeScript app using React 19 and shadcn/ui primitives.
 - `app/`: App Router entrypoints and feature code.
-  - `app/components/`: game UI components (`GameArea`, `StatsBar`, etc.).
-  - `app/hooks/`: React hooks for state/session logic.
-  - `app/lib/`: core blackjack/domain logic (strategy, deck, rules, house edge).
+  - `app/components/`: game and training UI (`GameArea`, `StatsBar`, `TrainingMode`, etc.).
+  - `app/hooks/`: React hooks for game state, session stats, and training flow.
+  - `app/lib/`: core blackjack/domain logic (strategy, deck, surrender, EV, simulation).
+  - `app/api/simulate/`: API route for server-side simulation.
+  - `app/workers/`: worker-based simulation support.
 - `components/ui/`: shared shadcn/ui primitives.
 - `lib/`: cross-cutting utilities.
-- `scripts/`: executable TypeScript validation scripts (`strategy-test.ts`, `house-edge-test.ts`).
+- `scripts/`: executable TypeScript validation and analysis scripts.
+- `tests/`: Vitest suites for strategy and rules regressions.
 - `public/`: static assets.
 
 Use the `@/*` path alias from `tsconfig.json` for root-based imports when helpful.
@@ -19,8 +22,11 @@ Use `pnpm` (lockfile is `pnpm-lock.yaml`).
 - `pnpm build`: create production build.
 - `pnpm start`: serve the production build.
 - `pnpm lint`: run ESLint (Next.js core-web-vitals + TypeScript rules).
-- `pnpm test:strategy`: run strategy correctness checks against expected actions.
-- `pnpm test:house-edge`: run house-edge regression checks.
+- `pnpm test`: run the Vitest suite once.
+- `pnpm test:watch`: run Vitest in watch mode.
+- `pnpm test:strategy`: run script-based strategy correctness checks.
+- `pnpm test:house-edge`: run script-based house-edge regression checks.
+- `pnpm test:early-surrender`: run script-based early surrender checks.
 
 ## Coding Style & Naming Conventions
 - Language: TypeScript with `strict` mode enabled.
@@ -30,10 +36,11 @@ Use `pnpm` (lockfile is `pnpm-lock.yaml`).
 - Prefer small, focused modules and colocate feature UI under `app/components`.
 
 ## Testing Guidelines
-There is no Jest/Vitest suite yet; test coverage is maintained through the `scripts/*.ts` runners.
-- Add or update script test cases when changing strategy tables, rule handling, or edge calculations.
+Test coverage is split between Vitest suites (`tests/`) and script runners (`scripts/*.ts`).
+- Add or update Vitest coverage when changing deterministic logic that can be unit tested.
+- Add or update script test cases when changing strategy tables, rule handling, simulation, or EV calculations.
 - Keep test case names descriptive and tied to blackjack rule variants.
-- Run both test scripts and `pnpm lint` before opening a PR.
+- Run `pnpm lint`, `pnpm test`, and relevant script checks before opening a PR.
 
 ## Commit & Pull Request Guidelines
 Recent history favors short, imperative commit subjects (for example: `refactor`, `track amount`, `better edge calculation`).
