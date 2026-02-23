@@ -1,68 +1,31 @@
 import { HouseRules } from "./types";
-import { isEarlySurrender } from "./surrender";
+import { calculateEV } from "./ev-calculator";
+
+const houseEdgeCache = new Map<string, number>();
+
+function getHouseEdgeCacheKey(rules: HouseRules): string {
+  return JSON.stringify([
+    rules.decks,
+    rules.hitSoft17,
+    rules.blackjackPays,
+    rules.doubleAfterSplit,
+    rules.doubleRestriction,
+    rules.surrenderAllowed,
+    rules.resplitAces,
+    rules.noHoleCard,
+    rules.maxSplitHands,
+  ]);
+}
 
 export function calculateHouseEdge(rules: HouseRules): number {
-  let edge = 0.43;
-
-  const deckAdjustments: Record<number, number> = {
-    1: -0.48,
-    2: -0.19,
-    3: -0.13,
-    4: -0.06,
-    5: -0.03,
-    6: -0.02,
-    7: -0.01,
-    8: 0,
-  };
-
-  if (deckAdjustments[rules.decks] !== undefined) {
-    edge += deckAdjustments[rules.decks];
-  } else if (rules.decks > 8) {
-    edge += 0.01 * (rules.decks - 8);
+  const cacheKey = getHouseEdgeCacheKey(rules);
+  const cachedEdge = houseEdgeCache.get(cacheKey);
+  if (cachedEdge !== undefined) {
+    return cachedEdge;
   }
 
-  if (rules.hitSoft17) {
-    edge += 0.22;
-  }
-
-  if (rules.blackjackPays === "6:5") {
-    edge += 1.39;
-  } else if (rules.blackjackPays === "1:1") {
-    edge += 2.27;
-  }
-
-  if (!rules.doubleAfterSplit) {
-    edge += 0.14;
-  }
-
-  if (rules.doubleRestriction === "9-11") {
-    edge += 0.09;
-  } else if (rules.doubleRestriction === "10-11") {
-    edge += 0.18;
-  }
-
-  if (rules.surrenderAllowed === "none") {
-    edge += 0.07;
-  } else if (isEarlySurrender(rules)) {
-    edge -= 0.63;
-  } else if (rules.surrenderAllowed === "enhcNoAce") {
-    edge -= 0.18;
-  }
-
-  if (rules.resplitAces) {
-    edge -= 0.08;
-  }
-
-  if (rules.noHoleCard) {
-    edge += 0.06;
-  }
-
-  if (rules.maxSplitHands === 3) {
-    edge += 0.01;
-  } else if (rules.maxSplitHands === 2) {
-    edge += 0.02;
-  }
-
+  const edge = calculateEV(rules).houseEdgePercent;
+  houseEdgeCache.set(cacheKey, edge);
   return edge;
 }
 
