@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Project at a glance
-TwentOne is a Next.js 16 + React 19 + TypeScript blackjack trainer.
+TwentOne is a Next.js 16 + React 19 + TypeScript blackjack trainer with a shadcn/ui-based component layer.
 
 ## Repo layout
 - `app/`: application routes, UI, hooks, and blackjack domain logic.

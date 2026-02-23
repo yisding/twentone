@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repository is a single Next.js 16 + TypeScript app.
+This repository is a single Next.js 16 + TypeScript app using React 19 and shadcn/ui primitives.
 - `app/`: App Router entrypoints and feature code.
   - `app/components/`: game and training UI (`GameArea`, `StatsBar`, `TrainingMode`, etc.).
   - `app/hooks/`: React hooks for game state, session stats, and training flow.
