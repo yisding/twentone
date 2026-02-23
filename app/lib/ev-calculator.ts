@@ -13,7 +13,7 @@
 
 import { HouseRules, DEFAULT_HOUSE_RULES } from "./types";
 import { CARD_VALUES, INFINITE_DECK_PROBS, N, addCard } from "./ev-common";
-import { isEarlySurrender, isLateSurrender } from "./surrender";
+import { getCalculationSurrenderAllowed, isEarlySurrender, isLateSurrender } from "./surrender";
 
 function tableCanSurrender(rules: HouseRules, dealerUpcard: number): boolean {
   if (isEarlySurrender(rules)) {
@@ -770,11 +770,16 @@ export function calculateCDEV(
 export function calculateEV(
   rules: HouseRules = DEFAULT_HOUSE_RULES,
 ): EVResult {
-  const decks = rules.decks;
+  const normalizedRules: HouseRules = {
+    ...rules,
+    surrenderAllowed: getCalculationSurrenderAllowed(rules),
+  };
+
+  const decks = normalizedRules.decks;
   if (Number.isInteger(decks) && decks >= 1 && decks <= 8) {
-    return calculateCDEV(rules);
+    return calculateCDEV(normalizedRules);
   }
-  return calculateInfiniteDeckEV(rules);
+  return calculateInfiniteDeckEV(normalizedRules);
 }
 
 // === Strategy table generation ===

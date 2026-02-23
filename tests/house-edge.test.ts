@@ -94,6 +94,35 @@ describe("house edge regression", () => {
     expect(noDas).toBeGreaterThan(s17Late);
   });
 
+
+  it("treats ENHC all-upcards same as early for EV calculations", () => {
+    const early = calculateHouseEdge({
+      ...BASE_TEST_RULES,
+      decks: 6,
+      noHoleCard: true,
+      hitSoft17: false,
+      doubleAfterSplit: true,
+      doubleRestriction: "any",
+      surrenderAllowed: "early",
+      blackjackPays: "3:2",
+      maxSplitHands: 4,
+    });
+
+    const enhcAll = calculateHouseEdge({
+      ...BASE_TEST_RULES,
+      decks: 6,
+      noHoleCard: true,
+      hitSoft17: false,
+      doubleAfterSplit: true,
+      doubleRestriction: "any",
+      surrenderAllowed: "enhcAll",
+      blackjackPays: "3:2",
+      maxSplitHands: 4,
+    });
+
+    expect(Math.abs(early - enhcAll)).toBeLessThanOrEqual(1e-12);
+  });
+
   it("captures expected rule-direction deltas for surrender", () => {
     const s17Late = calculateHouseEdge({ ...BASE_TEST_RULES, decks: 6, hitSoft17: false, surrenderAllowed: "late", blackjackPays: "3:2", doubleAfterSplit: true, doubleRestriction: "any", maxSplitHands: 4 });
     const noSurrender = calculateHouseEdge({ ...BASE_TEST_RULES, decks: 6, hitSoft17: false, surrenderAllowed: "none", blackjackPays: "3:2", doubleAfterSplit: true, doubleRestriction: "any", maxSplitHands: 4 });

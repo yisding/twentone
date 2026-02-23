@@ -24,3 +24,8 @@ export function canSurrenderAgainstDealerUpCard(rules: HouseRules, dealerHand: H
 
   return true;
 }
+
+
+export function getCalculationSurrenderAllowed(rules: HouseRules): HouseRules["surrenderAllowed"] {
+  return rules.surrenderAllowed === "enhcAll" ? "early" : rules.surrenderAllowed;
+}

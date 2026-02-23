@@ -1,5 +1,6 @@
 import { HouseRules } from "./types";
 import { calculateEV } from "./ev-calculator";
+import { getCalculationSurrenderAllowed } from "./surrender";
 
 const houseEdgeCache = new Map<string, number>();
 
@@ -10,7 +11,7 @@ function getHouseEdgeCacheKey(rules: HouseRules): string {
     rules.blackjackPays,
     rules.doubleAfterSplit,
     rules.doubleRestriction,
-    rules.surrenderAllowed,
+    getCalculationSurrenderAllowed(rules),
     rules.resplitAces,
     rules.noHoleCard,
     rules.maxSplitHands,
