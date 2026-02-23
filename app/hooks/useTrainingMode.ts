@@ -19,6 +19,7 @@ import {
   getEmptyProgress,
 } from "../lib/spaced-repetition";
 import { getBasicStrategyAction } from "../lib/strategy";
+import { canSurrenderAgainstDealerUpCard, isEarlySurrender } from "../lib/surrender";
 
 function computeExpectedAction(
   scenario: TrainingScenario,
@@ -41,6 +42,22 @@ function computeExpectedAction(
     isStanding: false,
   };
   return getBasicStrategyAction(hand, dealerHand, rules);
+}
+
+
+function getScenarioDealerHand(scenario: TrainingScenario): Hand {
+  return {
+    cards: [scenario.dealerUpCard],
+    isDoubledDown: false,
+    isSplit: false,
+    isSplitAces: false,
+    isSurrendered: false,
+    isStanding: false,
+  };
+}
+
+function canSurrenderInScenario(scenario: TrainingScenario, rules: HouseRules): boolean {
+  return canSurrenderAgainstDealerUpCard(rules, getScenarioDealerHand(scenario));
 }
 
 export interface TrainingModeState {
@@ -113,7 +130,7 @@ export function useTrainingMode(rules: HouseRules) {
 
     const rawExpectedAction = computeExpectedAction(state.currentScenario, rules);
     if (
-      rules.surrenderAllowed === "early" &&
+      isEarlySurrender(rules) &&
       state.hasCompletedEarlySurrenderDecision &&
       rawExpectedAction === "surrender"
     ) {
@@ -131,7 +148,7 @@ export function useTrainingMode(rules: HouseRules) {
       if (!state.currentScenario) return;
 
       if (
-        rules.surrenderAllowed === "early" &&
+        isEarlySurrender(rules) &&
         state.hasCompletedEarlySurrenderDecision &&
         action === "surrender"
       ) {
@@ -267,25 +284,27 @@ export function useTrainingMode(rules: HouseRules) {
   const getAvailableActions = useCallback((): PlayerAction[] => {
     if (!state.currentScenario) return ["hit", "stand"];
 
+    const canSurrender = canSurrenderInScenario(state.currentScenario, rules);
+
     if (
-      rules.surrenderAllowed === "early" &&
-      !state.hasCompletedEarlySurrenderDecision
+      isEarlySurrender(rules) &&
+      !state.hasCompletedEarlySurrenderDecision &&
+      canSurrender
     ) {
       return ["surrender"];
     }
 
-    const actions: PlayerAction[] = ["hit", "stand"];
-    actions.push("double");
-    actions.push("split");
-    if (rules.surrenderAllowed !== "none" && rules.surrenderAllowed !== "early") {
+    const actions: PlayerAction[] = ["hit", "stand", "double", "split"];
+    if (!isEarlySurrender(rules) && canSurrender) {
       actions.push("surrender");
     }
     return actions;
-  }, [state.currentScenario, state.hasCompletedEarlySurrenderDecision, rules.surrenderAllowed]);
+  }, [state.currentScenario, state.hasCompletedEarlySurrenderDecision, rules]);
 
   const needsEarlySurrenderDecision =
     Boolean(state.currentScenario) &&
-    rules.surrenderAllowed === "early" &&
+    isEarlySurrender(rules) &&
+    canSurrenderInScenario(state.currentScenario, rules) &&
     !state.hasCompletedEarlySurrenderDecision;
 
   return {
