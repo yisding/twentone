@@ -8,8 +8,16 @@ function loadStats(): SessionStats {
     const saved = localStorage.getItem("blackjack-stats");
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed.correct === "number" && typeof parsed.wrong === "number") {
-        return { correct: parsed.correct, wrong: parsed.wrong, winnings: parsed.winnings || 0 };
+      if (
+        parsed &&
+        typeof parsed.correct === "number" &&
+        typeof parsed.wrong === "number"
+      ) {
+        return {
+          correct: parsed.correct,
+          wrong: parsed.wrong,
+          winnings: parsed.winnings || 0,
+        };
       }
     }
   } catch {
@@ -27,7 +35,11 @@ export function useSessionStats() {
 
   // Load from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
-    setStats(loadStats());
+    const timer = window.setTimeout(() => {
+      setStats(loadStats());
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   const recordAnswer = useCallback((isCorrect: boolean) => {

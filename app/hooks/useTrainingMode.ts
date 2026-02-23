@@ -55,6 +55,7 @@ export interface TrainingModeState {
 }
 
 export function useTrainingMode(rules: HouseRules) {
+  const [isProgressHydrated, setIsProgressHydrated] = useState(false);
   const [state, setState] = useState<TrainingModeState>(() => ({
     currentScenario: null,
     progress: getEmptyProgress(),
@@ -67,15 +68,19 @@ export function useTrainingMode(rules: HouseRules) {
   }));
 
   // Load from localStorage after mount to avoid hydration mismatch
-  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    setState((prev) => ({ ...prev, progress: loadProgress() }));
-    setHydrated(true);
+    const timer = window.setTimeout(() => {
+      setState((prev) => ({ ...prev, progress: loadProgress() }));
+      setIsProgressHydrated(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (hydrated) saveProgress(state.progress);
-  }, [state.progress, hydrated]);
+    if (!isProgressHydrated) return;
+    saveProgress(state.progress);
+  }, [state.progress, isProgressHydrated]);
 
   const availableScenarios = TRAINING_SCENARIOS;
 
@@ -140,6 +145,50 @@ export function useTrainingMode(rules: HouseRules) {
     [state.currentScenario, state.progress, rules],
   );
 
+  const submitEarlySurrenderDecision = useCallback(
+    (decision: "surrender" | "continue") => {
+      if (!state.currentScenario) return;
+
+      const rawExpectedAction = computeExpectedAction(
+        state.currentScenario,
+        rules,
+      );
+      const expectedAction: PlayerAction =
+        rawExpectedAction === "surrender" ? "surrender" : "continue";
+      const chosenAction: PlayerAction =
+        decision === "surrender" ? "surrender" : "continue";
+      const isCorrect = chosenAction === expectedAction;
+
+      const record: TrainingRecord = {
+        scenarioId: state.currentScenario.id,
+        timestamp: Date.now(),
+        wasCorrect: isCorrect,
+        responseTime: 0,
+        userAction: chosenAction,
+      };
+
+      const updatedProgress = recordAnswer(
+        state.progress,
+        state.currentScenario,
+        record,
+      );
+
+      setState((prev) => ({
+        ...prev,
+        progress: updatedProgress,
+        showAnswer: true,
+        lastAnswerCorrect: isCorrect,
+        lastExpectedAction: expectedAction,
+        lastChosenAction: chosenAction,
+        sessionStats: {
+          correct: prev.sessionStats.correct + (isCorrect ? 1 : 0),
+          total: prev.sessionStats.total + 1,
+        },
+      }));
+    },
+    [state.currentScenario, state.progress, rules],
+  );
+
   const setFocusCategory = useCallback(
     (category: TrainingScenarioCategory | null) => {
       setState((prev) => ({
@@ -179,6 +228,10 @@ export function useTrainingMode(rules: HouseRules) {
   const getAvailableActions = useCallback((): PlayerAction[] => {
     if (!state.currentScenario) return ["hit", "stand"];
 
+    if (rules.surrenderAllowed === "early") {
+      return ["surrender"];
+    }
+
     const actions: PlayerAction[] = ["hit", "stand"];
     actions.push("double");
     actions.push("split");
@@ -192,6 +245,7 @@ export function useTrainingMode(rules: HouseRules) {
     state,
     nextScenario,
     submitAnswer,
+    submitEarlySurrenderDecision,
     setFocusCategory,
     resetProgress,
     skipScenario,
