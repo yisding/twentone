@@ -16,16 +16,21 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
+  const [isThemeHydrated, setIsThemeHydrated] = useState(false);
 
   // Load theme from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const resolvedTheme: Theme =
+      stored === "dark" || stored === "light"
+        ? stored
+        : window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+
     const timer = window.setTimeout(() => {
-      const stored = localStorage.getItem("theme");
-      if (stored === "dark" || stored === "light") {
-        setTheme(stored);
-      } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        setTheme("dark");
-      }
+      setTheme(resolvedTheme);
+      setIsThemeHydrated(true);
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -39,8 +44,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       root.classList.remove("dark");
     }
+    if (!isThemeHydrated) return;
     localStorage.setItem("theme", theme);
-  }, [theme]);
+  }, [theme, isThemeHydrated]);
 
   const toggleTheme = () =>
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));

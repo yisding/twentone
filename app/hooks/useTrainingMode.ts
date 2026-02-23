@@ -55,6 +55,7 @@ export interface TrainingModeState {
 }
 
 export function useTrainingMode(rules: HouseRules) {
+  const [isProgressHydrated, setIsProgressHydrated] = useState(false);
   const [state, setState] = useState<TrainingModeState>(() => ({
     currentScenario: null,
     progress: getEmptyProgress(),
@@ -70,14 +71,16 @@ export function useTrainingMode(rules: HouseRules) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setState((prev) => ({ ...prev, progress: loadProgress() }));
+      setIsProgressHydrated(true);
     }, 0);
 
     return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
+    if (!isProgressHydrated) return;
     saveProgress(state.progress);
-  }, [state.progress]);
+  }, [state.progress, isProgressHydrated]);
 
   const availableScenarios = TRAINING_SCENARIOS;
 
