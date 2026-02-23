@@ -149,7 +149,14 @@ export default function Home() {
                   strategyTable={strategyTable}
                   availableActions={getTrainingActions()}
                   onNextScenario={nextScenario}
-                  onSubmitAnswer={submitAnswer}
+                  onSubmitAnswer={(action) => {
+                    if (trainingNeedsEarlySurrenderDecision && action === "surrender") {
+                      submitEarlySurrenderDecision("surrender");
+                      return;
+                    }
+
+                    submitAnswer(action);
+                  }}
                   onDeclineEarlySurrender={() =>
                     submitEarlySurrenderDecision("continue")
                   }
