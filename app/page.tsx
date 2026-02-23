@@ -66,6 +66,7 @@ export default function Home() {
     stats: trainingStats,
     weakCategories,
     getAvailableActions: getTrainingActions,
+    needsEarlySurrenderDecision: trainingNeedsEarlySurrenderDecision,
   } = useTrainingMode(rules);
 
   const handleRulesChange = useCallback(
@@ -136,11 +137,7 @@ export default function Home() {
               />
               <div className="p-3 sm:p-6">
                 <TrainingMode
-                  needsEarlySurrenderDecision={
-                    Boolean(trainingState.currentScenario) &&
-                    rules.surrenderAllowed === "early" &&
-                    !trainingState.showAnswer
-                  }
+                  needsEarlySurrenderDecision={trainingNeedsEarlySurrenderDecision}
                   currentScenario={trainingState.currentScenario}
                   showAnswer={trainingState.showAnswer}
                   lastAnswerCorrect={trainingState.lastAnswerCorrect}
@@ -152,16 +149,7 @@ export default function Home() {
                   strategyTable={strategyTable}
                   availableActions={getTrainingActions()}
                   onNextScenario={nextScenario}
-                  onSubmitAnswer={(action) => {
-                    if (
-                      rules.surrenderAllowed === "early" &&
-                      !trainingState.showAnswer
-                    ) {
-                      submitEarlySurrenderDecision("surrender");
-                      return;
-                    }
-                    submitAnswer(action);
-                  }}
+                  onSubmitAnswer={submitAnswer}
                   onDeclineEarlySurrender={() =>
                     submitEarlySurrenderDecision("continue")
                   }

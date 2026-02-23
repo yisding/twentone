@@ -52,6 +52,7 @@ export interface TrainingModeState {
   lastChosenAction: PlayerAction | null;
   sessionStats: { correct: number; total: number };
   focusCategory: TrainingScenarioCategory | null;
+  hasCompletedEarlySurrenderDecision: boolean;
 }
 
 export function useTrainingMode(rules: HouseRules) {
@@ -65,6 +66,7 @@ export function useTrainingMode(rules: HouseRules) {
     lastChosenAction: null,
     sessionStats: { correct: 0, total: 0 },
     focusCategory: null,
+    hasCompletedEarlySurrenderDecision: false,
   }));
 
   // Load from localStorage after mount to avoid hydration mismatch
@@ -102,17 +104,42 @@ export function useTrainingMode(rules: HouseRules) {
       lastAnswerCorrect: null,
       lastExpectedAction: expectedAction,
       lastChosenAction: null,
+      hasCompletedEarlySurrenderDecision: false,
     }));
   }, [availableScenarios, state.progress, state.focusCategory, rules]);
+
+  const getExpectedAction = useCallback((): PlayerAction | null => {
+    if (!state.currentScenario) return null;
+
+    const rawExpectedAction = computeExpectedAction(state.currentScenario, rules);
+    if (
+      rules.surrenderAllowed === "early" &&
+      state.hasCompletedEarlySurrenderDecision &&
+      rawExpectedAction === "surrender"
+    ) {
+      return computeExpectedAction(state.currentScenario, {
+        ...rules,
+        surrenderAllowed: "none",
+      });
+    }
+
+    return rawExpectedAction;
+  }, [state.currentScenario, state.hasCompletedEarlySurrenderDecision, rules]);
 
   const submitAnswer = useCallback(
     (action: PlayerAction) => {
       if (!state.currentScenario) return;
 
-      const expectedAction = computeExpectedAction(
-        state.currentScenario,
-        rules,
-      );
+      if (
+        rules.surrenderAllowed === "early" &&
+        state.hasCompletedEarlySurrenderDecision &&
+        action === "surrender"
+      ) {
+        return;
+      }
+
+      const expectedAction = getExpectedAction();
+      if (!expectedAction) return;
       const isCorrect = action === expectedAction;
 
       const record: TrainingRecord = {
@@ -142,21 +169,31 @@ export function useTrainingMode(rules: HouseRules) {
         },
       }));
     },
-    [state.currentScenario, state.progress, rules],
+    [state.currentScenario, state.progress, state.hasCompletedEarlySurrenderDecision, rules, getExpectedAction],
   );
 
   const submitEarlySurrenderDecision = useCallback(
     (decision: "surrender" | "continue") => {
       if (!state.currentScenario) return;
 
-      const rawExpectedAction = computeExpectedAction(
-        state.currentScenario,
-        rules,
-      );
+      const rawExpectedAction = computeExpectedAction(state.currentScenario, rules);
       const expectedAction: PlayerAction =
         rawExpectedAction === "surrender" ? "surrender" : "continue";
       const chosenAction: PlayerAction =
         decision === "surrender" ? "surrender" : "continue";
+
+      if (decision === "continue") {
+        setState((prev) => ({
+          ...prev,
+          hasCompletedEarlySurrenderDecision: true,
+          lastExpectedAction: expectedAction,
+          lastChosenAction: chosenAction,
+          lastAnswerCorrect: null,
+          showAnswer: false,
+        }));
+        return;
+      }
+
       const isCorrect = chosenAction === expectedAction;
 
       const record: TrainingRecord = {
@@ -184,6 +221,7 @@ export function useTrainingMode(rules: HouseRules) {
           correct: prev.sessionStats.correct + (isCorrect ? 1 : 0),
           total: prev.sessionStats.total + 1,
         },
+        hasCompletedEarlySurrenderDecision: true,
       }));
     },
     [state.currentScenario, state.progress, rules],
@@ -208,6 +246,7 @@ export function useTrainingMode(rules: HouseRules) {
       currentScenario: null,
       showAnswer: false,
       lastAnswerCorrect: null,
+      hasCompletedEarlySurrenderDecision: false,
     }));
   }, []);
 
@@ -228,18 +267,26 @@ export function useTrainingMode(rules: HouseRules) {
   const getAvailableActions = useCallback((): PlayerAction[] => {
     if (!state.currentScenario) return ["hit", "stand"];
 
-    if (rules.surrenderAllowed === "early") {
+    if (
+      rules.surrenderAllowed === "early" &&
+      !state.hasCompletedEarlySurrenderDecision
+    ) {
       return ["surrender"];
     }
 
     const actions: PlayerAction[] = ["hit", "stand"];
     actions.push("double");
     actions.push("split");
-    if (rules.surrenderAllowed !== "none") {
+    if (rules.surrenderAllowed !== "none" && rules.surrenderAllowed !== "early") {
       actions.push("surrender");
     }
     return actions;
-  }, [state.currentScenario, rules.surrenderAllowed]);
+  }, [state.currentScenario, state.hasCompletedEarlySurrenderDecision, rules.surrenderAllowed]);
+
+  const needsEarlySurrenderDecision =
+    Boolean(state.currentScenario) &&
+    rules.surrenderAllowed === "early" &&
+    !state.hasCompletedEarlySurrenderDecision;
 
   return {
     state,
@@ -253,5 +300,6 @@ export function useTrainingMode(rules: HouseRules) {
     weakCategories,
     getCategoryStats,
     getAvailableActions,
+    needsEarlySurrenderDecision,
   };
 }
