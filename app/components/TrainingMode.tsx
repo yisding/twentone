@@ -348,11 +348,21 @@ function FeedbackMessage({
     isStanding: false,
   };
 
+  const isEarlySurrenderFeedback =
+    rules.surrenderAllowed === "early" &&
+    [expectedAction, chosenAction].some(
+      (action) => action === "surrender" || action === "continue",
+    );
+  const validActionLabels: PlayerAction[] | undefined = isEarlySurrenderFeedback
+    ? ["surrender", "continue"]
+    : undefined;
+
   const actionEVs = computeAvailableActionEVs(
     playerHand,
     dealerHand,
     rules,
     strategyTable,
+    validActionLabels,
   ).sort((a, b) => b.ev - a.ev);
 
   const evCost =
@@ -363,6 +373,7 @@ function FeedbackMessage({
           chosenAction,
           rules,
           strategyTable,
+          validActionLabels,
         )
       : null;
 
