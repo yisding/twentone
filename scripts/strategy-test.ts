@@ -68,10 +68,10 @@ const DOUBLE_9_11_ONLY_RULES: HouseRules = {
   doubleRestriction: "9-11",
 };
 
-const ENHC_NO_ACE_RULES: HouseRules = {
+const ENHC_ES10_RULES: HouseRules = {
   ...S17_RULES,
   noHoleCard: true,
-  surrenderAllowed: "enhcNoAce",
+  surrenderAllowed: "es10",
 };
 
 
@@ -311,22 +311,22 @@ function runComparison() {
 
   allDiscrepancies.push(...runTestSuite("ENHC all-upcards surrender behavior", enhcAllCases, ENHC_ALL_RULES));
 
-  const enhcNoAceCases: TestCase[] = [
+  const es10Cases: TestCase[] = [
     {
       playerCards: [card("10"), card("6")],
       dealerUpCard: card("A"),
       expected: "hit",
-      category: "ENHC no-Ace surrender - 16 vs A cannot surrender",
+      category: "ENHC ES10 surrender - 16 vs A cannot surrender",
     },
     {
       playerCards: [card("10"), card("6")],
       dealerUpCard: card("10"),
       expected: "surrender",
-      category: "ENHC no-Ace surrender - 16 vs 10 can surrender",
+      category: "ENHC ES10 surrender - 16 vs 10 can surrender",
     },
   ];
 
-  allDiscrepancies.push(...runTestSuite("ENHC no-Ace surrender restrictions", enhcNoAceCases, ENHC_NO_ACE_RULES));
+  allDiscrepancies.push(...runTestSuite("ENHC ES10 surrender restrictions", es10Cases, ENHC_ES10_RULES));
 
   allDiscrepancies.push(
     ...runTestSuite(
@@ -350,7 +350,7 @@ export function runStrategyTests(): string[] {
   }
 
   const fallbackRules: HouseRules = {
-    ...ENHC_NO_ACE_RULES,
+    ...ENHC_ES10_RULES,
     doubleRestriction: "any",
   };
   const fallbackPlayerHand = createHand([card("10"), card("6")]);

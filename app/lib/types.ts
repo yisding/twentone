@@ -34,7 +34,7 @@ export type DoubleRestriction = "any" | "9-11" | "10-11";
 
 export interface HouseRules {
   hitSoft17: boolean;
-  surrenderAllowed: "none" | "early" | "late" | "enhcAll" | "enhcNoAce";
+  surrenderAllowed: "none" | "early" | "late" | "enhcAll" | "es10";
   doubleAfterSplit: boolean;
   doubleRestriction: DoubleRestriction;
   resplitAces: boolean;
