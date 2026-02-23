@@ -13,6 +13,7 @@ import {
 } from "../lib/game";
 import { getBasicStrategyAction, getBestActionWithoutSurrender } from "../lib/strategy";
 import { isBusted, isBlackjack, getDealerUpCard, getCardValue, dealCard } from "../lib/deck";
+import { canSurrenderAgainstDealerUpCard, isEarlySurrender } from "../lib/surrender";
 
 function processForcedActions(state: GameState, rules: HouseRules): GameState {
   let currentState = state;
@@ -69,7 +70,7 @@ export function useGameState(
     const playerHasBlackjack = isBlackjack(newGame.playerHands[0]);
     const dealerHasBlackjack =
       !rules.noHoleCard &&
-      rules.surrenderAllowed !== "early" &&
+      !isEarlySurrender(rules) &&
       isBlackjack(newGame.dealerHand);
     if (playerHasBlackjack || dealerHasBlackjack) {
       if (rules.noHoleCard) {
@@ -143,8 +144,7 @@ export function useGameState(
           ? ["surrender", "continue"]
           : getAvailableActions(gameState, rules).filter((a) =>
             !(
-              rules.surrenderAllowed === "early" &&
-              !rules.noHoleCard &&
+              isEarlySurrender(rules) &&
               hasCompletedEarlySurrenderDecision &&
               a === "surrender"
             )
@@ -253,8 +253,7 @@ export function useGameState(
       ? (["surrender"] as PlayerAction[])
       : getAvailableActions(gameState, rules).filter((action) =>
         !(
-          rules.surrenderAllowed === "early" &&
-          !rules.noHoleCard &&
+          isEarlySurrender(rules) &&
           hasCompletedEarlySurrenderDecision &&
           action === "surrender"
         ),
@@ -286,7 +285,7 @@ function shouldPromptEarlySurrenderDecision(
 ): boolean {
   if (hasCompletedEarlySurrenderDecision) return false;
   if (state.phase !== "playing") return false;
-  if (rules.surrenderAllowed !== "early") return false;
+  if (!isEarlySurrender(rules)) return false;
   if (rules.noHoleCard) return false;
   if (state.currentHandIndex !== 0 || state.playerHands.length !== 1) return false;
 
@@ -295,7 +294,7 @@ function shouldPromptEarlySurrenderDecision(
   if (state.dealerHand.cards.length !== 2) return false;
   if (hand.cards.length !== 2 || hand.isSplit) return false;
 
-  return true;
+  return canSurrenderAgainstDealerUpCard(rules, state.dealerHand);
 }
 
 function applyAction(state: GameState, action: PlayerAction, rules: HouseRules, checkStrategy: boolean, isESPrompt: boolean = false): GameState {
@@ -339,7 +338,7 @@ function shouldResolveDealerBlackjackAfterEarlySurrenderDecision(
   action: PlayerAction,
 ): boolean {
   if (action === "surrender") return false;
-  if (rules.surrenderAllowed !== "early") return false;
+  if (!isEarlySurrender(rules)) return false;
   if (rules.noHoleCard) return false;
   if (state.currentHandIndex !== 0 || state.playerHands.length !== 1) return false;
 
