@@ -138,7 +138,8 @@ export default function Home() {
                 <TrainingMode
                   needsEarlySurrenderDecision={
                     Boolean(trainingState.currentScenario) &&
-                    rules.surrenderAllowed === "early"
+                    rules.surrenderAllowed === "early" &&
+                    !trainingState.showAnswer
                   }
                   currentScenario={trainingState.currentScenario}
                   showAnswer={trainingState.showAnswer}
@@ -152,10 +153,11 @@ export default function Home() {
                   availableActions={getTrainingActions()}
                   onNextScenario={nextScenario}
                   onSubmitAnswer={(action) => {
-                    if (rules.surrenderAllowed === "early") {
-                      submitEarlySurrenderDecision(
-                        action === "surrender" ? "surrender" : "continue",
-                      );
+                    if (
+                      rules.surrenderAllowed === "early" &&
+                      !trainingState.showAnswer
+                    ) {
+                      submitEarlySurrenderDecision("surrender");
                       return;
                     }
                     submitAnswer(action);

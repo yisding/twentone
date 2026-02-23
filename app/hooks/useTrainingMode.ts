@@ -149,20 +149,15 @@ export function useTrainingMode(rules: HouseRules) {
     (decision: "surrender" | "continue") => {
       if (!state.currentScenario) return;
 
-      const expectedAction = computeExpectedAction(
+      const rawExpectedAction = computeExpectedAction(
         state.currentScenario,
         rules,
       );
-      const choseSurrender = decision === "surrender";
-      const isCorrect = choseSurrender
-        ? expectedAction === "surrender"
-        : expectedAction !== "surrender";
-
-      const chosenAction: PlayerAction = choseSurrender
-        ? "surrender"
-        : expectedAction === "surrender"
-          ? "hit"
-          : expectedAction;
+      const expectedAction: PlayerAction =
+        rawExpectedAction === "surrender" ? "surrender" : "continue";
+      const chosenAction: PlayerAction =
+        decision === "surrender" ? "surrender" : "continue";
+      const isCorrect = chosenAction === expectedAction;
 
       const record: TrainingRecord = {
         scenarioId: state.currentScenario.id,
