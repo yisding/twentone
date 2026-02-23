@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint && tsc --noEmit",
     "test:strategy": "tsx scripts/strategy-test.ts",
     "test:house-edge": "tsx scripts/house-edge-test.ts",
     "test:ev-mistakes": "tsx scripts/ev-cost-of-mistakes.ts",
