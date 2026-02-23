@@ -114,9 +114,9 @@ export function SimulationPanel({ rules, onRulesChange }: SimulationPanelProps) 
         />
       </div>
 
-      <div className="flex items-center gap-4">
-        <label className="text-sm font-medium">Hands:</label>
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="mr-1 text-sm font-medium">Hands:</label>
           {[1000000, 10000000, 100000000].map((num) => (
             <Button
               key={num}
@@ -131,7 +131,7 @@ export function SimulationPanel({ rules, onRulesChange }: SimulationPanelProps) 
           <select
             value={numHands > 100000000 ? numHands.toString() : ""}
             onChange={(e) => e.target.value && setNumHands(parseInt(e.target.value))}
-            className="h-8 px-3 text-sm border rounded-md bg-background"
+            className="h-8 rounded-md border bg-background px-3 text-sm"
           >
             <option value="">More...</option>
             <option value="500000000">500M</option>
@@ -142,7 +142,7 @@ export function SimulationPanel({ rules, onRulesChange }: SimulationPanelProps) 
           onClick={runSimulation}
           disabled={isRunning}
           size="sm"
-          className="bg-green-600 hover:bg-green-700"
+          className="w-full bg-green-600 hover:bg-green-700 sm:ml-auto sm:w-auto"
         >
           {isRunning ? (
             <>
