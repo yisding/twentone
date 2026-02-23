@@ -73,9 +73,22 @@ export default function Home() {
     (nextRules: HouseRules) => {
       setRules(nextRules);
       discardCurrentGame();
-      setGameMode("practice");
+      nextScenario();
     },
-    [discardCurrentGame],
+    [discardCurrentGame, nextScenario],
+  );
+
+  const handleModeChange = useCallback(
+    (mode: GameMode) => {
+      if (mode === gameMode) {
+        return;
+      }
+
+      setGameMode(mode);
+      discardCurrentGame();
+      nextScenario();
+    },
+    [discardCurrentGame, gameMode, nextScenario],
   );
 
   const currentHand = gameState?.playerHands[gameState.currentHandIndex];
@@ -95,7 +108,7 @@ export default function Home() {
             />
           </div>
 
-          <ModeSelector currentMode={gameMode} onModeChange={setGameMode} />
+          <ModeSelector currentMode={gameMode} onModeChange={handleModeChange} />
 
           {gameMode === "practice" && (
             <>

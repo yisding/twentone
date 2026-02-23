@@ -221,7 +221,6 @@ function DeckSelector({ decks, onChange }: DeckSelectorProps) {
           <SelectContent>
             <SelectItem value="1">1</SelectItem>
             <SelectItem value="4">4</SelectItem>
-            <SelectItem value="8">8</SelectItem>
           </SelectContent>
         </Select>
       </div>
