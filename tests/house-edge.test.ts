@@ -93,4 +93,56 @@ describe("house edge regression", () => {
     expect(noSurrender).toBeGreaterThan(s17Late);
     expect(earlySurrender).toBeLessThan(s17Late);
   });
+
+  it("normalizes invalid deck counts instead of silently using baseline", () => {
+    const baselineOneDeck = calculateHouseEdge({
+      ...BASE_TEST_RULES,
+      decks: 1,
+      hitSoft17: false,
+      surrenderAllowed: "late",
+      blackjackPays: "3:2",
+      doubleAfterSplit: true,
+      doubleRestriction: "any",
+      maxSplitHands: 4,
+    });
+
+    const zeroDeckInput = calculateHouseEdge({
+      ...BASE_TEST_RULES,
+      decks: 0,
+      hitSoft17: false,
+      surrenderAllowed: "late",
+      blackjackPays: "3:2",
+      doubleAfterSplit: true,
+      doubleRestriction: "any",
+      maxSplitHands: 4,
+    } as HouseRules);
+
+    expect(zeroDeckInput).toBe(baselineOneDeck);
+  });
+
+  it("maps surrender variants to no-hole-card mode consistently", () => {
+    const enhcAll = calculateHouseEdge({
+      ...BASE_TEST_RULES,
+      noHoleCard: true,
+      surrenderAllowed: "enhcAll",
+    });
+    const early = calculateHouseEdge({
+      ...BASE_TEST_RULES,
+      noHoleCard: true,
+      surrenderAllowed: "early",
+    });
+    expect(early).toBe(enhcAll);
+
+    const enhcNoAce = calculateHouseEdge({
+      ...BASE_TEST_RULES,
+      noHoleCard: true,
+      surrenderAllowed: "enhcNoAce",
+    });
+    const late = calculateHouseEdge({
+      ...BASE_TEST_RULES,
+      noHoleCard: true,
+      surrenderAllowed: "late",
+    });
+    expect(late).toBe(enhcNoAce);
+  });
 });
