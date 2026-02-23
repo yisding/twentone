@@ -80,11 +80,15 @@ export default function Home() {
 
   const handleModeChange = useCallback(
     (mode: GameMode) => {
+      if (mode === gameMode) {
+        return;
+      }
+
       setGameMode(mode);
       discardCurrentGame();
       nextScenario();
     },
-    [discardCurrentGame, nextScenario],
+    [discardCurrentGame, gameMode, nextScenario],
   );
 
   const currentHand = gameState?.playerHands[gameState.currentHandIndex];
