@@ -214,7 +214,7 @@ function DeckSelector({ decks, onChange }: DeckSelectorProps) {
         >
           <SelectTrigger
             size="sm"
-            className={decks !== 2 && decks !== 6 && decks !== 8 ? "w-20 border-green-600 bg-green-600 text-white" : "w-20"}
+            className={decks !== 2 && decks !== 6 && decks !== 8 ? "w-24 border-green-600 bg-green-600 text-white" : "w-24"}
           >
             <SelectValue placeholder="Other" />
           </SelectTrigger>
