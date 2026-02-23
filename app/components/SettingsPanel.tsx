@@ -48,7 +48,7 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
                 ? [
                     { value: "none", label: "None" },
                     { value: "enhcAll", label: "All upcards" },
-                    { value: "enhcNoAce", label: "No Ace" },
+                    { value: "es10", label: "10s only" },
                   ]
                 : [
                     { value: "none", label: "None" },
@@ -93,11 +93,11 @@ export function SettingsPanel({ rules, onRulesChange, isOpen, onToggle }: Settin
                   ? rules.surrenderAllowed === "early"
                     ? "enhcAll"
                     : rules.surrenderAllowed === "late"
-                      ? "enhcNoAce"
+                      ? "es10"
                       : rules.surrenderAllowed
                   : rules.surrenderAllowed === "enhcAll"
                     ? "early"
-                    : rules.surrenderAllowed === "enhcNoAce"
+                    : rules.surrenderAllowed === "es10"
                       ? "late"
                       : rules.surrenderAllowed;
 

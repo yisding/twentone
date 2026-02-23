@@ -128,7 +128,7 @@ interface RuleConstants {
   hitSoft17: boolean;
   canSurrender: boolean;
   isEarlySurrender: boolean;
-  blockSurrenderVsAce: boolean;
+  surrenderOnlyVsTen: boolean;
   isDAS: boolean;
   isSingleOrDoubleDeck: boolean;
   doubleRestriction: string;
@@ -150,7 +150,7 @@ function precomputeRules(rules: HouseRules): RuleConstants {
     hitSoft17: rules.hitSoft17,
     canSurrender: rules.surrenderAllowed !== "none",
     isEarlySurrender: isEarlySurrender(rules),
-    blockSurrenderVsAce: rules.surrenderAllowed === "enhcNoAce",
+    surrenderOnlyVsTen: rules.surrenderAllowed === "es10",
     isDAS: rules.doubleAfterSplit,
     isSingleOrDoubleDeck: rules.decks <= 2,
     doubleRestriction: rules.doubleRestriction,
@@ -186,7 +186,7 @@ function getStrategyAction(
     rc.canSurrender &&
     hand.cardCount === 2 &&
     !hand.isSplit &&
-    (!rc.blockSurrenderVsAce || dealerUpValue !== 11);
+    (!rc.surrenderOnlyVsTen || dealerUpValue === 10);
 
   // Pair strategy
   if (hand.isPair) {
@@ -373,7 +373,7 @@ function validateAction(
     // Surrender requires: allowed by rules, 2 cards, not split
     const canSurrenderByUpCard =
       rc.canSurrender &&
-      (!rc.blockSurrenderVsAce || dealerUpValue !== 11);
+      (!rc.surrenderOnlyVsTen || dealerUpValue === 10);
 
     if (canSurrenderByUpCard && hand.cardCount === 2 && !hand.isSplit) return Action.Surrender;
     return Action.Stand;

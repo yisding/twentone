@@ -17,11 +17,10 @@ import { isEarlySurrender, isLateSurrender } from "./surrender";
 
 function tableCanSurrender(rules: HouseRules, dealerUpcard: number): boolean {
   if (isEarlySurrender(rules)) {
-    if (rules.surrenderAllowed === "enhcNoAce" && dealerUpcard === 11) return false;
+    if (rules.surrenderAllowed === "es10" && dealerUpcard !== 10) return false;
     return true;
   }
   if (isLateSurrender(rules)) {
-    if (rules.surrenderAllowed === "enhcNoAce" && dealerUpcard === 11) return false;
     return true;
   }
   return false;
@@ -315,6 +314,7 @@ export function calculateInfiniteDeckEV(
       upcard,
       rules.noHoleCard,
     );
+    const canEarlySurrenderUpcard = tableCanSurrender(rules, upcard);
 
     // Set per-upcard state
     currentDD = dd;
@@ -355,7 +355,7 @@ export function calculateInfiniteDeckEV(
             if (splitEv > playEV) playEV = splitEv;
           }
 
-          if (isEarlySurrender(rules)) {
+          if (isEarlySurrender(rules) && canEarlySurrenderUpcard) {
             // Early surrender: decide before dealer peek
             // Surrender EV = -0.5 (unconditional)
             // Play EV = P(dealer BJ)*(-1) + P(no BJ)*playEV
@@ -407,6 +407,7 @@ export function calculateFiniteDeckEV(
   for (let ui = 0; ui < N; ui++) {
     if (shoe[ui] === 0) continue;
     const upcard = CARD_VALUES[ui];
+    const canEarlySurrenderUpcard = tableCanSurrender(rules, upcard);
     const pU = shoe[ui] / totalCards;
     shoe[ui]--;
     const total1 = totalCards - 1;
@@ -471,7 +472,7 @@ export function calculateFiniteDeckEV(
             if (splitEv > playEV) playEV = splitEv;
           }
 
-          if (isEarlySurr) {
+          if (isEarlySurr && canEarlySurrenderUpcard) {
             const playOnEV = bjProb * -1 + (1 - bjProb) * playEV;
             handEV = Math.max(-0.5, playOnEV);
           } else {
@@ -672,6 +673,7 @@ export function calculateCDEV(
   for (let ui = 0; ui < N; ui++) {
     if (shoe[ui] === 0) continue;
     const uc = CARD_VALUES[ui];
+    const canEarlySurrenderUpcard = tableCanSurrender(rules, uc);
     const pU = shoe[ui] / tc;
     shoe[ui]--;
     const t1 = tc - 1;
@@ -738,7 +740,7 @@ export function calculateCDEV(
             const sev = evSplitCD(c1, shoe, t3);
             if (sev > pev) pev = sev;
           }
-          if (surrEarly) {
+          if (surrEarly && canEarlySurrenderUpcard) {
             hev = Math.max(-0.5, bjP * -1 + (1 - bjP) * pev);
           } else {
             hev = bjP * -1 + (1 - bjP) * pev;

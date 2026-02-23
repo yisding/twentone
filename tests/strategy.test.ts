@@ -79,11 +79,11 @@ describe("basic strategy actions", () => {
     expect(getBasicStrategyAction(playerHand, dealerHand, rules)).toBe(expected);
   });
 
-  it("uses fallback action when surrender is not allowed by ENHC no-Ace restriction", () => {
+  it("uses fallback action when surrender is not allowed by ENHC ES10 restriction", () => {
     const fallbackRules: HouseRules = {
       ...S17_RULES,
       noHoleCard: true,
-      surrenderAllowed: "enhcNoAce",
+      surrenderAllowed: "es10",
       doubleRestriction: "any",
     };
 

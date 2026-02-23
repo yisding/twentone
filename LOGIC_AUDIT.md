@@ -20,5 +20,5 @@
 - Align surrender logic in `simulation-fast` to the canonical `getBasicStrategyAction` behavior, including:
   - early-surrender ranges,
   - pair-specific early surrender cases,
-  - dealer-upcard gating for `enhcNoAce`.
+  - dealer-upcard gating for `es10`.
 - Add targeted regression tests that compare `simulation.ts` and `simulation-fast.ts` on surrender-centric rulesets.
