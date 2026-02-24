@@ -542,6 +542,32 @@ function applyTableEvs(available: ActionEV[], tableEvs: NonNullable<StrategyEntr
   }
 }
 
+function getStrategyEntryForHand(
+  playerHand: Hand,
+  dealerHand: Hand,
+  strategyTable: StrategyTable,
+): StrategyEntry | null {
+  if (playerHand.cards.length !== 2 || playerHand.isSplit) return null;
+
+  const dealerUpCard = getDealerUpCard(dealerHand);
+  if (!dealerUpCard) return null;
+
+  const dealerValue = getCardValue(dealerUpCard);
+  const { total, isSoft } = calculateHandValue(playerHand);
+  const isPair = playerHand.cards[0].rank === playerHand.cards[1].rank;
+
+  if (isPair) {
+    const pairValue = getCardValue(playerHand.cards[0]);
+    return strategyTable.pairs.get(pairValue)?.get(dealerValue) ?? null;
+  }
+
+  if (isSoft && total >= 13) {
+    return strategyTable.soft.get(total)?.get(dealerValue) ?? null;
+  }
+
+  return strategyTable.hard.get(total)?.get(dealerValue) ?? null;
+}
+
 export function computeAvailableActionEVs(
   playerHand: Hand,
   dealerHand: Hand,
@@ -555,22 +581,13 @@ export function computeAvailableActionEVs(
     available = available.filter(a => validActionLabels.includes(a.action));
   }
 
-  // For pairs with a strategy table, use the strategy table's EVs which are
-  // computed with full composition-dependent tracking from the strategy table
-  // generation pass. This ensures pair EVs are consistent with the strategy
-  // table's split/no-split recommendations.
+  // For initial 2-card hands, use strategy table EVs so EV feedback remains
+  // consistent with the recommended strategy action shown by the trainer.
+  // This also avoids composition-specific EV drift in the per-hand utility path.
   if (strategyTable && playerHand.cards.length === 2) {
-    const isPair = playerHand.cards[0].rank === playerHand.cards[1].rank;
-    if (isPair) {
-      const dealerUpCard = getDealerUpCard(dealerHand);
-      if (dealerUpCard) {
-        const pairValue = getCardValue(playerHand.cards[0]);
-        const dealerValue = getCardValue(dealerUpCard);
-        const entry = strategyTable.pairs.get(pairValue)?.get(dealerValue);
-        if (entry?.evs) {
-          applyTableEvs(available, entry.evs);
-        }
-      }
+    const entry = getStrategyEntryForHand(playerHand, dealerHand, strategyTable);
+    if (entry?.evs) {
+      applyTableEvs(available, entry.evs);
     }
   }
 
