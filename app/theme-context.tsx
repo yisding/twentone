@@ -19,12 +19,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Load theme from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "dark" || stored === "light") {
-      setTheme(stored);
-    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark");
-    }
+    const timer = window.setTimeout(() => {
+      const stored = localStorage.getItem("theme");
+      if (stored === "dark" || stored === "light") {
+        setTheme(stored);
+      } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        setTheme("dark");
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Keep the .dark class on <html> in sync

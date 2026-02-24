@@ -22,7 +22,17 @@ function savePlays(plays: IncorrectPlay[]) {
 
 function describeHand(cards: Card[]): string {
   const { total, isSoft } = calculateCardsValue(cards);
-  if (isPair({ cards, isDoubledDown: false, isSplit: false, isSplitAces: false, isSurrendered: false, isStanding: false }) && cards.length === 2) {
+  if (
+    isPair({
+      cards,
+      isDoubledDown: false,
+      isSplit: false,
+      isSplitAces: false,
+      isSurrendered: false,
+      isStanding: false,
+    }) &&
+    cards.length === 2
+  ) {
     return `Pair of ${cards[0].rank}s`;
   }
   return `${isSoft ? "Soft" : "Hard"} ${total}`;
@@ -33,14 +43,31 @@ export function useIncorrectPlays() {
 
   // Load from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
-    setPlays(loadPlays());
+    const timer = window.setTimeout(() => {
+      setPlays(loadPlays());
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   const recordIncorrectPlay = useCallback(
-    (playerCards: Card[], dealerUpCard: Card, playerAction: PlayerAction, expectedAction: PlayerAction, rules: HouseRules) => {
+    (
+      playerCards: Card[],
+      dealerUpCard: Card,
+      playerAction: PlayerAction,
+      expectedAction: PlayerAction,
+      rules: HouseRules,
+    ) => {
       const dealerValue = getCardValue(dealerUpCard);
       const explanation = getStrategyExplanation(
-        { cards: playerCards, isDoubledDown: false, isSplit: false, isSplitAces: false, isSurrendered: false, isStanding: false },
+        {
+          cards: playerCards,
+          isDoubledDown: false,
+          isSplit: false,
+          isSplitAces: false,
+          isSurrendered: false,
+          isStanding: false,
+        },
         dealerValue,
         expectedAction,
         rules,
@@ -61,7 +88,7 @@ export function useIncorrectPlays() {
         return newPlays;
       });
     },
-    []
+    [],
   );
 
   const clearPlays = useCallback(() => {

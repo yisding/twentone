@@ -3,8 +3,19 @@
 import { useState, useCallback, useMemo } from "react";
 import { HouseRules, DEFAULT_HOUSE_RULES } from "./lib/types";
 import { generateStrategyTable } from "./lib/ev-calculator";
-import { SettingsPanel, StatsBar, GameArea, MistakesLog, TrainingMode } from "./components";
-import { useGameState, useSessionStats, useIncorrectPlays, useTrainingMode } from "./hooks";
+import {
+  SettingsPanel,
+  StatsBar,
+  GameArea,
+  MistakesLog,
+  TrainingMode,
+} from "./components";
+import {
+  useGameState,
+  useSessionStats,
+  useIncorrectPlays,
+  useTrainingMode,
+} from "./hooks";
 import { useTheme } from "./theme-context";
 import { Sun, Moon } from "lucide-react";
 
@@ -17,8 +28,14 @@ export default function Home() {
 
   const strategyTable = useMemo(() => generateStrategyTable(rules), [rules]);
 
-  const { stats, recordAnswer, updateWinnings, reset: resetStats } = useSessionStats();
-  const { plays, recordIncorrectPlay, clearPlays, removePlay } = useIncorrectPlays();
+  const {
+    stats,
+    recordAnswer,
+    updateWinnings,
+    reset: resetStats,
+  } = useSessionStats();
+  const { plays, recordIncorrectPlay, clearPlays, removePlay } =
+    useIncorrectPlays();
   const {
     gameState,
     showCorrectAnswer,
@@ -42,6 +59,7 @@ export default function Home() {
     state: trainingState,
     nextScenario,
     submitAnswer,
+    submitEarlySurrenderDecision,
     setFocusCategory,
     resetProgress,
     skipScenario,
@@ -50,11 +68,14 @@ export default function Home() {
     getAvailableActions: getTrainingActions,
   } = useTrainingMode(rules);
 
-  const handleRulesChange = useCallback((nextRules: HouseRules) => {
-    setRules(nextRules);
-    discardCurrentGame();
-    setGameMode("practice");
-  }, [discardCurrentGame]);
+  const handleRulesChange = useCallback(
+    (nextRules: HouseRules) => {
+      setRules(nextRules);
+      discardCurrentGame();
+      setGameMode("practice");
+    },
+    [discardCurrentGame],
+  );
 
   const currentHand = gameState?.playerHands[gameState.currentHandIndex];
 
@@ -97,7 +118,11 @@ export default function Home() {
                 ) : (
                   <StartButton onStart={startNewGame} />
                 )}
-                <MistakesLog plays={plays} onClear={clearPlays} onRemove={removePlay} />
+                <MistakesLog
+                  plays={plays}
+                  onClear={clearPlays}
+                  onRemove={removePlay}
+                />
               </div>
             </>
           )}
@@ -111,6 +136,10 @@ export default function Home() {
               />
               <div className="p-3 sm:p-6">
                 <TrainingMode
+                  needsEarlySurrenderDecision={
+                    Boolean(trainingState.currentScenario) &&
+                    rules.surrenderAllowed === "early"
+                  }
                   currentScenario={trainingState.currentScenario}
                   showAnswer={trainingState.showAnswer}
                   lastAnswerCorrect={trainingState.lastAnswerCorrect}
@@ -122,7 +151,18 @@ export default function Home() {
                   strategyTable={strategyTable}
                   availableActions={getTrainingActions()}
                   onNextScenario={nextScenario}
-                  onSubmitAnswer={submitAnswer}
+                  onSubmitAnswer={(action) => {
+                    if (rules.surrenderAllowed === "early") {
+                      submitEarlySurrenderDecision(
+                        action === "surrender" ? "surrender" : "continue",
+                      );
+                      return;
+                    }
+                    submitAnswer(action);
+                  }}
+                  onDeclineEarlySurrender={() =>
+                    submitEarlySurrenderDecision("continue")
+                  }
                   onSetFocusCategory={setFocusCategory}
                   onSkip={skipScenario}
                   categoryStats={trainingState.progress.categoryStats}
@@ -147,15 +187,20 @@ function ModeSelector({
   onModeChange: (mode: GameMode) => void;
 }) {
   return (
-    <div className="flex border-b border-border" role="tablist" aria-label="Game mode">
+    <div
+      className="flex border-b border-border"
+      role="tablist"
+      aria-label="Game mode"
+    >
       <button
         role="tab"
         aria-selected={currentMode === "practice"}
         onClick={() => onModeChange("practice")}
-        className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${currentMode === "practice"
-          ? "bg-muted text-foreground border-b-2 border-green-600"
-          : "text-muted-foreground hover:text-foreground"
-          }`}
+        className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+          currentMode === "practice"
+            ? "bg-muted text-foreground border-b-2 border-green-600"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
       >
         Practice Mode
       </button>
@@ -163,10 +208,11 @@ function ModeSelector({
         role="tab"
         aria-selected={currentMode === "training"}
         onClick={() => onModeChange("training")}
-        className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${currentMode === "training"
-          ? "bg-muted text-foreground border-b-2 border-green-600"
-          : "text-muted-foreground hover:text-foreground"
-          }`}
+        className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+          currentMode === "training"
+            ? "bg-muted text-foreground border-b-2 border-green-600"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
       >
         Training Mode
       </button>
@@ -180,17 +226,21 @@ function Header() {
     <header className="text-center mb-6 relative">
       <button
         onClick={toggleTheme}
-        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        aria-label={
+          theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+        }
         className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
       >
-        {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+        {theme === "dark" ? (
+          <Sun className="size-5" />
+        ) : (
+          <Moon className="size-5" />
+        )}
       </button>
       <h1 className="text-3xl font-bold text-white mb-2">
         Blackjack Strategy Trainer
       </h1>
-      <p className="text-green-200">
-        Test your knowledge of basic strategy
-      </p>
+      <p className="text-green-200">Test your knowledge of basic strategy</p>
     </header>
   );
 }
@@ -234,19 +284,27 @@ function TrainingStatsBar({
         <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm">
           <div>
             <span className="text-muted-foreground">Session:</span>{" "}
-            <span className="font-semibold">{sessionStats.correct}/{sessionStats.total}</span>
+            <span className="font-semibold">
+              {sessionStats.correct}/{sessionStats.total}
+            </span>
             {sessionStats.total > 0 && (
-              <span className="ml-1 text-muted-foreground/60">({sessionAccuracy}%)</span>
+              <span className="ml-1 text-muted-foreground/60">
+                ({sessionAccuracy}%)
+              </span>
             )}
           </div>
           <div>
             <span className="text-muted-foreground">Overall:</span>{" "}
-            <span className="font-semibold">{Math.round(trainingStats.averageAccuracy * 100)}%</span>
+            <span className="font-semibold">
+              {Math.round(trainingStats.averageAccuracy * 100)}%
+            </span>
           </div>
           {trainingStats.masteredScenarios > 0 && (
             <div className="text-green-600">
               <span className="text-zinc-500">Mastered:</span>{" "}
-              <span className="font-semibold">{trainingStats.masteredScenarios}</span>
+              <span className="font-semibold">
+                {trainingStats.masteredScenarios}
+              </span>
             </div>
           )}
         </div>

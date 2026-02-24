@@ -67,15 +67,17 @@ export function useTrainingMode(rules: HouseRules) {
   }));
 
   // Load from localStorage after mount to avoid hydration mismatch
-  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    setState((prev) => ({ ...prev, progress: loadProgress() }));
-    setHydrated(true);
+    const timer = window.setTimeout(() => {
+      setState((prev) => ({ ...prev, progress: loadProgress() }));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (hydrated) saveProgress(state.progress);
-  }, [state.progress, hydrated]);
+    saveProgress(state.progress);
+  }, [state.progress]);
 
   const availableScenarios = TRAINING_SCENARIOS;
 
@@ -140,6 +142,53 @@ export function useTrainingMode(rules: HouseRules) {
     [state.currentScenario, state.progress, rules],
   );
 
+  const submitEarlySurrenderDecision = useCallback(
+    (decision: "surrender" | "continue") => {
+      if (!state.currentScenario) return;
+
+      const expectedAction = computeExpectedAction(
+        state.currentScenario,
+        rules,
+      );
+      const choseSurrender = decision === "surrender";
+      const isCorrect = choseSurrender
+        ? expectedAction === "surrender"
+        : expectedAction !== "surrender";
+
+      const chosenAction: PlayerAction = choseSurrender
+        ? "surrender"
+        : "continue";
+
+      const record: TrainingRecord = {
+        scenarioId: state.currentScenario.id,
+        timestamp: Date.now(),
+        wasCorrect: isCorrect,
+        responseTime: 0,
+        userAction: chosenAction,
+      };
+
+      const updatedProgress = recordAnswer(
+        state.progress,
+        state.currentScenario,
+        record,
+      );
+
+      setState((prev) => ({
+        ...prev,
+        progress: updatedProgress,
+        showAnswer: true,
+        lastAnswerCorrect: isCorrect,
+        lastExpectedAction: expectedAction,
+        lastChosenAction: chosenAction,
+        sessionStats: {
+          correct: prev.sessionStats.correct + (isCorrect ? 1 : 0),
+          total: prev.sessionStats.total + 1,
+        },
+      }));
+    },
+    [state.currentScenario, state.progress, rules],
+  );
+
   const setFocusCategory = useCallback(
     (category: TrainingScenarioCategory | null) => {
       setState((prev) => ({
@@ -179,6 +228,10 @@ export function useTrainingMode(rules: HouseRules) {
   const getAvailableActions = useCallback((): PlayerAction[] => {
     if (!state.currentScenario) return ["hit", "stand"];
 
+    if (rules.surrenderAllowed === "early") {
+      return ["surrender"];
+    }
+
     const actions: PlayerAction[] = ["hit", "stand"];
     actions.push("double");
     actions.push("split");
@@ -192,6 +245,7 @@ export function useTrainingMode(rules: HouseRules) {
     state,
     nextScenario,
     submitAnswer,
+    submitEarlySurrenderDecision,
     setFocusCategory,
     resetProgress,
     skipScenario,
